@@ -1,0 +1,47 @@
+graph TD
+    A[User Login] --> B[Generate Token]
+    B --> C[Check Balance]
+    C --> D[Show Available Rooms]
+    D --> E[User Selects Room]
+    E --> F[Validate Room Access]
+    F --> G[Generate Game URL]
+    G --> H[Redirect to Buffalo Game]
+    H --> I[Game Session]
+    I --> J[Game Result]
+    J --> K[Update Balance]
+    K --> L[Return to Lobby]
+
+    --------------- 
+    graph TD
+    A[User Login] --> B[Credential Validation]
+    B --> C[Status Check]
+    C --> D[Password Change Check]
+    D --> E[Role Verification]
+    E --> F[Token Generation]
+    F --> G[Dashboard Redirect]
+    
+    H[Role-Based Access] --> I[Owner Dashboard]
+    H --> J[Master Dashboard]
+    H --> K[Agent Dashboard]
+    H --> L[SubAgent Dashboard]
+    -----
+    graph TD
+    A[Player Login] --> B[Balance Check]
+    B --> C[Game Selection]
+    C --> D[Provider API Call]
+    D --> E[Game Launch]
+    E --> F[Betting Session]
+    F --> G[Game Results]
+    G --> H[Balance Update]
+    H --> I[Transaction Logging]
+    I --> J[Return to Lobby]
+
+    --- 
+    graph TD
+    A[Transaction Request] --> B[Authentication Check]
+    B --> C[Balance Validation]
+    C --> D[Row Locking]
+    D --> E[Balance Update]
+    E --> F[Transaction Log]
+    F --> G[Response Generation]
+    G --> H[Audit Trail]

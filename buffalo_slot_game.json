@@ -1,0 +1,70 @@
+{
+	"info": {
+		"_postman_id": "bde50cbe-680d-4824-a4a4-e9871a1407f4",
+		"name": "buffalo",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "25713106"
+	},
+	"item": [
+		{
+			"name": "get balance",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"uid\": \"596e0c89-65d3-434b-911c-dd67c58b6304\",\r\n    \"token\": \"e576f40f50271d330ca9650b474801ab672015acd920fe84fb67b6988c46353a\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uat-env.bigwinbet.net/api/get-user-balance",
+					"protocol": "https",
+					"host": [
+						"uat-env",
+						"bigwinbet",
+						"net"
+					],
+					"path": [
+						"api",
+						"get-user-balance"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "change money",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"uid\": \"596e0c89-65d3-434b-911c-dd67c58b6304\",\r\n    \"token\": \"e576f40f50271d330ca9650b474801ab672015acd920fe84fb67b6988c46353a\",\r\n    \"changemoney\": 1000,\r\n    \"bet\": 100,\r\n    \"win\": \"100\",\r\n    \"gameId\": \"1234\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uat-env.bigwinbet.net/api/change-balance",
+					"protocol": "https",
+					"host": [
+						"uat-env",
+						"bigwinbet",
+						"net"
+					],
+					"path": [
+						"api",
+						"change-balance"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
