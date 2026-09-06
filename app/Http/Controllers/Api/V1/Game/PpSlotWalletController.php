@@ -16,6 +16,10 @@ class PpSlotWalletController extends Controller
 {
     public function balance(Request $request)
     {
+        if (! $this->sourceIpAllowed($request)) {
+            return $this->error('Access denied', 6010);
+        }
+
         $validator = Validator::make($request->all(), [
             'UserID' => ['required', 'string', 'max:255'],
             'AppID' => ['required', 'string', 'max:255'],
@@ -53,6 +57,10 @@ class PpSlotWalletController extends Controller
 
     public function transfer(Request $request)
     {
+        if (! $this->sourceIpAllowed($request)) {
+            return $this->error('Access denied', 6010);
+        }
+
         $validator = Validator::make($request->all(), [
             'UserID' => ['required', 'string', 'max:255'],
             'AppID' => ['required', 'string', 'max:255'],
@@ -177,6 +185,13 @@ class PpSlotWalletController extends Controller
         }
 
         return $this->successTransfer($result['balance'], $data['RealAmount'] ?? $data['Amount']);
+    }
+
+    private function sourceIpAllowed(Request $request): bool
+    {
+        $allowed = config('game_providers.drivers.ppslot.callback_ips', []);
+
+        return $allowed === [] || in_array($request->ip(), $allowed, true);
     }
 
     private function validCredentials(string $appId, string $appSecret): bool
