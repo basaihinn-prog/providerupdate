@@ -11,7 +11,7 @@ use RuntimeException;
 
 class SyncPpSlotGames extends Command
 {
-    protected $signature = 'provider:sync-games {provider=ppslot} {--language=en}';
+    protected $signature = 'provider:sync-games {provider=ppslot} {--language=en} {--deactivate-missing}';
 
     protected $description = 'Sync a configured provider game catalog into game_lists';
 
@@ -29,16 +29,23 @@ class SyncPpSlotGames extends Command
         $driver = $providers->driver('ppslot');
         $games = $driver->games((string) $this->option('language'));
 
+        if ($games === []) {
+            $this->error('Provider returned an empty game catalog. No database changes were made.');
+
+            return self::FAILURE;
+        }
+
         $product = $this->resolveProduct($config);
         $typeMap = $config['game_type_map'] ?? [];
         $productCode = (int) ($config['product_code'] ?? 900001);
         $currency = (string) ($config['currency'] ?? 'MMK');
+        $deactivateMissing = (bool) $this->option('deactivate-missing');
 
         $synced = 0;
         $skipped = 0;
         $seenCodes = [];
 
-        DB::transaction(function () use ($games, $product, $typeMap, $productCode, $currency, &$synced, &$skipped, &$seenCodes) {
+        DB::transaction(function () use ($games, $product, $typeMap, $productCode, $currency, $deactivateMissing, &$synced, &$skipped, &$seenCodes) {
             foreach ($games as $index => $remote) {
                 $gameCode = trim((string) ($remote['ID'] ?? ''));
                 $gameName = trim((string) ($remote['Name'] ?? ''));
@@ -77,7 +84,7 @@ class SyncPpSlotGames extends Command
                 $synced++;
             }
 
-            if ($seenCodes !== []) {
+            if ($deactivateMissing && $seenCodes !== []) {
                 GameList::where('product_id', $product->id)
                     ->whereNotIn('game_code', $seenCodes)
                     ->update(['is_active' => false]);
@@ -85,6 +92,10 @@ class SyncPpSlotGames extends Command
         }, 3);
 
         $this->info("PPSLOT sync complete: {$synced} synced, {$skipped} skipped, product_id={$product->id}.");
+
+        if (! $deactivateMissing) {
+            $this->line('Missing remote games were left unchanged. Use --deactivate-missing only after verifying a complete provider catalog.');
+        }
 
         return self::SUCCESS;
     }
