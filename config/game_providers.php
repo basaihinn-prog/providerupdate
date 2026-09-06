@@ -20,6 +20,10 @@ return [
             'app_secret' => env('PPSLOT_APP_SECRET'),
             'language' => env('PPSLOT_LANGUAGE', 'my'),
             'currency' => env('PPSLOT_CURRENCY', 'MMK'),
+            'callback_ips' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('PPSLOT_CALLBACK_IPS', ''))
+            ))),
             'product_id' => (int) env('PPSLOT_PRODUCT_ID', 0),
             'product_code' => (int) env('PPSLOT_PRODUCT_CODE', 900001),
             'game_type_map' => [
