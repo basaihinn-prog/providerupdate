@@ -24,6 +24,12 @@ class GameList extends Model
         'provider',
         'order',
         'hot_status',
+        'game_list_status',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'game_list_status' => 'boolean',
     ];
 
     public function product()
