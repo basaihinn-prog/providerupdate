@@ -11,6 +11,7 @@ GAME_PROVIDER_DEFAULT=ppslot
 PPSLOT_API_URL=https://game.ppslot.site
 PPSLOT_APP_ID=YOUR_OPERATOR_APP_ID
 PPSLOT_APP_SECRET=YOUR_OPERATOR_APP_SECRET
+PPSLOT_CALLBACK_IPS=
 PPSLOT_LANGUAGE=my
 PPSLOT_CURRENCY=MMK
 PPSLOT_PRODUCT_ID=0
@@ -21,7 +22,7 @@ PPSLOT_CARD_GAME_TYPE_ID=12
 PPSLOT_LOTTERY_GAME_TYPE_ID=5
 ```
 
-Never commit real AppSecret values.
+Never commit real AppSecret values. `PPSLOT_CALLBACK_IPS` is optional; when provider callback source IPs are known, set a comma-separated allowlist such as `203.0.113.10,203.0.113.11`.
 
 ## Deployment order
 
@@ -95,7 +96,7 @@ POST https://YOUR-LARAVEL-DOMAIN/api/provider/ppslot/Cash/Get
 POST https://YOUR-LARAVEL-DOMAIN/api/provider/ppslot/Cash/TransferInOut
 ```
 
-`Cash/TransferInOut` is idempotent by `(provider, TransactionID)`, runs under a database transaction, locks the user wallet row, prevents negative balances, and returns the previously committed balance when the provider retries the same transaction.
+`Cash/TransferInOut` is idempotent by `(provider, TransactionID)`, runs under a database transaction, locks the user wallet row, prevents negative balances, validates `bet/win/refund` amount direction, removes `AppSecret` before storing request metadata, and returns the previously committed balance when the provider retries the same transaction.
 
 ## Adding another provider
 
