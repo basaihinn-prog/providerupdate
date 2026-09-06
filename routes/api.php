@@ -13,9 +13,9 @@ use App\Http\Controllers\Api\V1\Dashboard\AdminLoginController;
 use App\Http\Controllers\Api\V1\DepositRequestController;
 use App\Http\Controllers\Api\V1\DigitGame\DigitBetController;
 use App\Http\Controllers\Api\V1\DigitGame\DigitSlotController;
-//use App\Http\Controllers\Api\V1\Game\GameController;
 use App\Http\Controllers\Api\V1\Game\GSCPlusProviderController;
 use App\Http\Controllers\Api\V1\Game\LaunchGameController;
+use App\Http\Controllers\Api\V1\Game\PpSlotWalletController;
 use App\Http\Controllers\Api\V1\Game\ProviderTransactionCallbackController;
 use App\Http\Controllers\Api\V1\Game\ShanLaunchGameController;
 use App\Http\Controllers\Api\V1\Game\ShanPlayerHistoryController;
@@ -37,20 +37,6 @@ use App\Http\Controllers\Api\V1\Game\BuffaloGameController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
-
-// admin login
-//Route::post('/admin/login', [AdminLoginController::class, 'login']);
-
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/player-change-password', [AuthController::class, 'playerChangePassword']);
@@ -58,9 +44,9 @@ Route::post('/logout', [AuthController::class, 'logout']);
 
 Route::get('product-list', [ProductListController::class, 'index']);
 Route::get('operators/provider-games', [GameListController::class, 'index']);
-
 Route::post('/test-db-transaction', [TestDBTransactionController::class, 'PurseService']);
 
+// Legacy GSCPlus seamless callbacks kept for backward compatibility.
 Route::prefix('v1/api/seamless')->group(function () {
     Route::post('balance', [GetBalanceController::class, 'getBalance']);
     Route::post('withdraw', [WithdrawController::class, 'withdraw']);
@@ -68,16 +54,23 @@ Route::prefix('v1/api/seamless')->group(function () {
     Route::post('pushbetdata', [PushBetDataController::class, 'pushBetData']);
 });
 
+// PPSLOT / updatesky seamless-wallet callbacks. The game server operator Address
+// should point to: https://YOUR-DOMAIN/api/provider/ppslot
+Route::prefix('provider/ppslot')->group(function () {
+    Route::post('Cash/Get', [PpSlotWalletController::class, 'balance']);
+    Route::post('Cash/TransferInOut', [PpSlotWalletController::class, 'transfer']);
+});
+
 Route::post('/transactions', [ShanTransactionController::class, 'ShanTransactionCreate'])->middleware('transaction');
 
 Route::group(['middleware' => ['auth:sanctum']], function () {
-    
-    // python game api 
-Route::post('/user/balance', [UserController::class, 'updateBalance']);
+    // python game api
+    Route::post('/user/balance', [UserController::class, 'updateBalance']);
     Route::post('/game/log', [PythonGameController::class, 'storeGameLog']);
     Route::post('/game/stats', [PythonGameController::class, 'updateGameStats']);
 
-    // python game api end
+    // Generic provider-agnostic launch route plus legacy-compatible alias.
+    Route::post('/games/launch', [LaunchGameController::class, 'launchGame']);
     Route::post('/seamless/launch-game', [LaunchGameController::class, 'launchGame']);
 
     // main balance
@@ -89,8 +82,7 @@ Route::post('/user/balance', [UserController::class, 'updateBalance']);
     Route::get('user', [AuthController::class, 'getUser']);
     Route::get('/banks', [GSCPlusProviderController::class, 'banks']);
 
-    // fanicial api
-   
+    // financial api
     Route::post('depositfinicial', [DepositRequestController::class, 'FinicialDeposit']);
     Route::get('depositlogfinicial', [DepositRequestController::class, 'log']);
     Route::get('paymentTypefinicial', [GSCPlusProviderController::class, 'paymentType']);
@@ -100,17 +92,17 @@ Route::post('/user/balance', [UserController::class, 'updateBalance']);
     // Player game logs
     Route::get('/player/game-logs', [GameLogController::class, 'index']);
     Route::get('user', [AuthController::class, 'getUser']);
+
     // 2d route
     Route::post('/twod-bet', [TwoDigitBetController::class, 'store']);
     Route::get('/twod-bet-slips', [TwoDigitBetController::class, 'myBetSlips']);
-    // evening-twod-bet-slips
     Route::get('/evening-twod-bet-slips', [TwoDigitBetController::class, 'eveningSessionSlip']);
     Route::get('/two-d-daily-winners', [TwoDigitBetController::class, 'dailyWinners']);
+
     // shan launch game
     Route::post('shan-launch-game', [ShanLaunchGameController::class, 'launch']);
     Route::get('contact', [ContactController::class, 'get']);
 });
-
 
 Route::get('promotion', [PromotionController::class, 'index']);
 Route::get('winnerText', [BannerController::class, 'winnerText']);
@@ -124,20 +116,13 @@ Route::get('toptenwithdraw', [BannerController::class, 'TopTen']);
 Route::get('/game_types', [GSCPlusProviderController::class, 'gameTypes']);
 Route::get('/providers/{type}', [GSCPlusProviderController::class, 'providers']);
 Route::get('/game_lists/{type}/{provider}', [GSCPlusProviderController::class, 'gameLists']);
-
-Route::get('/game_lists/{type}/{productcode}', [GSCPlusProviderController::class, 'NewgameLists']);
+Route::get('/game_lists/by-product-code/{type}/{productcode}', [GSCPlusProviderController::class, 'NewgameLists']);
 Route::get('/hot_game_lists', [GSCPlusProviderController::class, 'hotGameLists']);
-
-// Route::group(['prefix' => 'shanreport', 'middleware' => ['auth:sanctum']], function () {
-//     Route::get('player-history', [ShanPlayerHistoryController::class, 'getPlayerHistory']);
-// });
 
 Route::group(['prefix' => 'shan'], function () {
     Route::post('getbalance', [ShanGetBalanceController::class, 'getBalance']);
-    // Route::post('launch-game', [ShanLaunchGameController::class, 'launch']);
 });
 
-// provider shan api
 Route::group(['prefix' => 'provider/shan'], function () {
     Route::post('ShanGetBalances', [ShankomeeGetBalanceController::class, 'shangetbalance']);
     Route::post('ShanLaunchGame', [ShankomeeGetBalanceController::class, 'LaunchGame']);
@@ -146,32 +131,24 @@ Route::group(['prefix' => 'provider/shan'], function () {
 Route::prefix('v1')->group(function () {
     Route::prefix('game')->group(function () {
         Route::post('transactions', [ProviderTransactionCallbackController::class, 'handle']);
-        // Route::post('transactions', [ProviderTransactionCallbackController::class]);
     });
 });
 
-
-
 Route::middleware(['auth:sanctum'])->group(function () {
-    //Route::get('/profile', [ProfileController::class, 'profile']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
-    
 });
 
-// DigitBet API routes, protected by sanctum middleware
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/digitbet', [DigitBetController::class, 'store']); // Endpoint for placing a bet
-    Route::get('/digitbet/history', [DigitBetController::class, 'history']); // Endpoint for getting bet history
+    Route::post('/digitbet', [DigitBetController::class, 'store']);
+    Route::get('/digitbet/history', [DigitBetController::class, 'history']);
     Route::post('/digit-slot/bet', [DigitSlotController::class, 'bet']);
 });
 
 // Buffalo Game API routes
 Route::prefix('buffalo')->group(function () {
-    // Public webhook endpoints (no authentication required)
     Route::post('/get-user-balance', [BuffaloGameController::class, 'getUserBalance']);
     Route::post('/change-balance', [BuffaloGameController::class, 'changeBalance']);
-    
-    // Protected endpoints for frontend integration
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/game-auth', [BuffaloGameController::class, 'generateGameAuth']);
         Route::post('/game-url', [BuffaloGameController::class, 'generateGameUrl']);
