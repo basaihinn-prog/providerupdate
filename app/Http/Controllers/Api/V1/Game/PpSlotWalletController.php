@@ -62,7 +62,7 @@ class PpSlotWalletController extends Controller
             'RoundID' => ['nullable', 'string', 'max:255'],
             'GameID' => ['nullable', 'string', 'max:255'],
             'ReqTime' => ['nullable'],
-            'Reason' => ['nullable', 'string', 'max:255'],
+            'Reason' => ['nullable', 'string', 'in:bet,win,refund'],
             'IsEnd' => ['nullable', 'boolean'],
             'RealAmount' => ['nullable', 'numeric'],
         ]);
@@ -75,6 +75,10 @@ class PpSlotWalletController extends Controller
 
         if (! $this->validCredentials($data['AppID'], $data['AppSecret'])) {
             return $this->error('Access denied', 6010);
+        }
+
+        if (! $this->validReasonAmount($data['Reason'] ?? null, (float) $data['Amount'])) {
+            return $this->error('Invalid transaction amount for reason', 6001);
         }
 
         $provider = 'ppslot';
@@ -118,6 +122,8 @@ class PpSlotWalletController extends Controller
                 $before = $this->fromMinor($beforeMinor);
                 $amount = $this->fromMinor($changeMinor);
                 $after = $this->fromMinor($afterMinor);
+                $rawRequest = $data;
+                unset($rawRequest['AppSecret']);
 
                 $user->balance = $after;
                 $user->save();
@@ -133,7 +139,7 @@ class PpSlotWalletController extends Controller
                     'after_balance' => $after,
                     'reason' => $data['Reason'] ?? null,
                     'is_end' => (bool) ($data['IsEnd'] ?? false),
-                    'raw_request' => $data,
+                    'raw_request' => $rawRequest,
                 ]);
 
                 return ['balance' => $after];
@@ -182,6 +188,15 @@ class PpSlotWalletController extends Controller
             && $expectedSecret !== ''
             && hash_equals($expectedId, $appId)
             && hash_equals($expectedSecret, $appSecret);
+    }
+
+    private function validReasonAmount(?string $reason, float $amount): bool
+    {
+        return match ($reason) {
+            'bet' => $amount <= 0,
+            'win', 'refund' => $amount >= 0,
+            default => true,
+        };
     }
 
     private function successTransfer($balance, $realAmount)
