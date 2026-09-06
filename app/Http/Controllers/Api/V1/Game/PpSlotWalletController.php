@@ -9,30 +9,37 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Throwable;
 
 class PpSlotWalletController extends Controller
 {
     public function balance(Request $request)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'UserID' => ['required', 'string', 'max:255'],
             'AppID' => ['required', 'string', 'max:255'],
             'AppSecret' => ['required', 'string', 'max:255'],
         ]);
 
+        if ($validator->fails()) {
+            return $this->error('Invalid request', 6001);
+        }
+
+        $data = $validator->validated();
+
         if (! $this->validCredentials($data['AppID'], $data['AppSecret'])) {
-            return $this->error('Access denied', 6010, 401);
+            return $this->error('Access denied', 6010);
         }
 
         $user = User::where('user_name', $data['UserID'])->first();
 
         if (! $user) {
-            return $this->error('Player account does not exist', 6007, 404);
+            return $this->error('Player account does not exist', 6007);
         }
 
         if ((int) $user->status !== 1) {
-            return $this->error('Player status is close', 6008, 403);
+            return $this->error('Player status is close', 6008);
         }
 
         return response()->json([
@@ -46,7 +53,7 @@ class PpSlotWalletController extends Controller
 
     public function transfer(Request $request)
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'UserID' => ['required', 'string', 'max:255'],
             'AppID' => ['required', 'string', 'max:255'],
             'AppSecret' => ['required', 'string', 'max:255'],
@@ -60,8 +67,14 @@ class PpSlotWalletController extends Controller
             'RealAmount' => ['nullable', 'numeric'],
         ]);
 
+        if ($validator->fails()) {
+            return $this->error('Invalid request', 6001);
+        }
+
+        $data = $validator->validated();
+
         if (! $this->validCredentials($data['AppID'], $data['AppSecret'])) {
-            return $this->error('Access denied', 6010, 401);
+            return $this->error('Access denied', 6010);
         }
 
         $provider = 'ppslot';
@@ -79,11 +92,11 @@ class PpSlotWalletController extends Controller
                 $user = User::where('user_name', $data['UserID'])->lockForUpdate()->first();
 
                 if (! $user) {
-                    return ['error' => ['Player account does not exist', 6007, 404]];
+                    return ['error' => ['Player account does not exist', 6007]];
                 }
 
                 if ((int) $user->status !== 1) {
-                    return ['error' => ['Player status is close', 6008, 403]];
+                    return ['error' => ['Player status is close', 6008]];
                 }
 
                 $existing = ProviderWalletTransaction::where('provider', $provider)
@@ -94,17 +107,17 @@ class PpSlotWalletController extends Controller
                     return ['balance' => $existing->after_balance];
                 }
 
-                $beforeCents = $this->toMinor($user->balance);
-                $changeCents = $this->toMinor($data['Amount']);
-                $afterCents = $beforeCents + $changeCents;
+                $beforeMinor = $this->toMinor($user->balance);
+                $changeMinor = $this->toMinor($data['Amount']);
+                $afterMinor = $beforeMinor + $changeMinor;
 
-                if ($afterCents < 0) {
-                    return ['error' => ['Insufficient balance', 6006, 409]];
+                if ($afterMinor < 0) {
+                    return ['error' => ['Insufficient balance', 6006]];
                 }
 
-                $before = $this->fromMinor($beforeCents);
-                $amount = $this->fromMinor($changeCents);
-                $after = $this->fromMinor($afterCents);
+                $before = $this->fromMinor($beforeMinor);
+                $amount = $this->fromMinor($changeMinor);
+                $after = $this->fromMinor($afterMinor);
 
                 $user->balance = $after;
                 $user->save();
@@ -134,7 +147,13 @@ class PpSlotWalletController extends Controller
                 return $this->successTransfer($existing->after_balance, $data['RealAmount'] ?? $data['Amount']);
             }
 
-            throw $e;
+            Log::error('PPSLOT wallet database error', [
+                'transaction_id' => $data['TransactionID'],
+                'user_id' => $data['UserID'],
+                'exception' => $e->getMessage(),
+            ]);
+
+            return $this->error('Internal wallet error', 5000);
         } catch (Throwable $e) {
             Log::error('PPSLOT wallet transfer failed', [
                 'transaction_id' => $data['TransactionID'],
@@ -142,13 +161,13 @@ class PpSlotWalletController extends Controller
                 'exception' => $e->getMessage(),
             ]);
 
-            return $this->error('Internal wallet error', 5000, 500);
+            return $this->error('Internal wallet error', 5000);
         }
 
         if (isset($result['error'])) {
-            [$message, $code, $status] = $result['error'];
+            [$message, $code] = $result['error'];
 
-            return $this->error($message, $code, $status);
+            return $this->error($message, $code);
         }
 
         return $this->successTransfer($result['balance'], $data['RealAmount'] ?? $data['Amount']);
@@ -177,13 +196,13 @@ class PpSlotWalletController extends Controller
         ]);
     }
 
-    private function error(string $message, int $code, int $httpStatus = 400)
+    private function error(string $message, int $code)
     {
         return response()->json([
             'code' => $code,
             'error' => $message,
             'data' => null,
-        ], $httpStatus);
+        ]);
     }
 
     private function toMinor($amount): int
