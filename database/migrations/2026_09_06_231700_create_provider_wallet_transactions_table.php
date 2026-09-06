@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('provider_wallet_transactions', function (Blueprint $table) {
             $table->id();
-            $table->string('provider', 100);
-            $table->string('transaction_id', 191);
+            $table->string('provider', 50);
+            $table->string('transaction_id', 128);
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('game_id')->nullable();
             $table->string('round_id')->nullable();
