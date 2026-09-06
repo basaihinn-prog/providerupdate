@@ -57,7 +57,7 @@ class PpSlotWalletController extends Controller
             'UserID' => ['required', 'string', 'max:255'],
             'AppID' => ['required', 'string', 'max:255'],
             'AppSecret' => ['required', 'string', 'max:255'],
-            'TransactionID' => ['required', 'string', 'max:191'],
+            'TransactionID' => ['required', 'string', 'max:128'],
             'Amount' => ['required', 'numeric'],
             'RoundID' => ['nullable', 'string', 'max:255'],
             'GameID' => ['nullable', 'string', 'max:255'],
