@@ -24,9 +24,9 @@ return [
             'product_code' => (int) env('PPSLOT_PRODUCT_CODE', 900001),
             'game_type_map' => [
                 0 => (int) env('PPSLOT_SLOT_GAME_TYPE_ID', 1),
-                1 => (int) env('PPSLOT_FISHING_GAME_TYPE_ID', 2),
-                3 => (int) env('PPSLOT_CARD_GAME_TYPE_ID', 3),
-                4 => (int) env('PPSLOT_LOTTERY_GAME_TYPE_ID', 4),
+                1 => (int) env('PPSLOT_FISHING_GAME_TYPE_ID', 8),
+                3 => (int) env('PPSLOT_CARD_GAME_TYPE_ID', 12),
+                4 => (int) env('PPSLOT_LOTTERY_GAME_TYPE_ID', 5),
             ],
         ],
     ],
