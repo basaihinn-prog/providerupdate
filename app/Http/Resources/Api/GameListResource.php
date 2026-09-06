@@ -7,13 +7,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class GameListResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
+        $providerCode = $this->product?->provider ?: $this->provider;
+
         return [
             'id' => $this->id,
             'game_code' => $this->game_code,
@@ -27,17 +24,16 @@ class GameListResource extends JsonResource
             'support_currency' => $this->support_currency,
             'status' => $this->status,
             'is_active' => (bool) $this->is_active,
-            'provider' => $this->provider,
+            'provider' => $providerCode,
             'order' => $this->order,
+
+            // Backward-compatible aliases used by the current web client.
+            'name' => $this->game_name,
+            'code' => $this->game_code,
+            'img' => $this->image_url,
+            'type_id' => $this->game_type_id,
+            'provider_id' => $this->product_id,
+            'provider_code' => $providerCode,
         ];
-        // return [
-        //     'id' => $this->id,
-        //     'name' => $this->name,
-        //     'code' => $this->code,
-        //     'img' => $this->image_url,
-        //     'type_id' => $this->game_type_id,
-        //     'provider_id' => $this->product_id,
-        //     'provider_code' => $this->product->code,
-        // ];
     }
 }
