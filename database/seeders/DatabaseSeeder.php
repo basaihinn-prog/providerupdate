@@ -2,13 +2,17 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Seed core application data only.
+     *
+     * External game-provider products and game catalogs are intentionally not
+     * seeded here. PPSLOT / updatesky is synchronized from its live API with:
+     *
+     *   php artisan provider:sync-games ppslot --language=my
      */
     public function run(): void
     {
@@ -19,9 +23,7 @@ class DatabaseSeeder extends Seeder
             PermissionRoleTableSeeder::class,
             UsersTableSeeder::class,
             RoleUserTableSeeder::class,
-            // BannerSeeder::class,
             BannerTextSeeder::class,
-            // BannerAdsSeeder::class,
             PaymentTypeTableSeeder::class,
             BankTableSeeder::class,
             WinnerTextSeeder::class,
@@ -30,92 +32,18 @@ class DatabaseSeeder extends Seeder
             ContactSeeder::class,
             PromotionSeeder::class,
             AdsVedioSeeder::class,
+
+            // Local / first-party game data.
             PoneWineBetsTableSeeder::class,
             PoneWinePlayerBetsTableSeeder::class,
             PoneWineBetInfosTableSeeder::class,
             GameTypeTableSeeder::class,
-            GscPlusProductTableSeeder::class,
-            GameTypeProductTableSeeder::class,
-            PragmaticPlaySlotGameListSeeder::class,
-            SEOGameListSeeder::class,
-            YEEBETGameListSeeder::class,
-            PlayTechGameSeeder::class,
-            PlayTechLiveCasinoGameSeeder::class,
-            JokerSlotGameSeeder::class,
-            JokerOtherGameSeeder::class,
-            JokerFishingGameSeeder::class,
-            SAGamingCasinoGameSeeder::class,
-            SpadeGamingSlotGameSeeder::class,
-            SpadeGamingFishingGameSeeder::class,
-            Live22SlotGameSeeder::class,
-            WMCasinoGameSeeder::class,
-            HabaneroSlotGameSeeder::class,
-            AWCSlotGameSeeder::class,
-            AWCFishingGameSeeder::class,
-            SabaSportBookGameSeeder::class,
-            PGSoftSlotGameSeeder::class,
-            PragmaticPlayLiveCasinoPremiumGameSeeder::class,
-            PragmaticPlayVirtualSportGameSeeder::class,
-            PragmaticPlayLiveCasinoGameSeeder::class,
-            DreamGamingSeeder::class,
-            // BigGamingFishingSeeder::class,
-            EvoPlayGameSeeder::class,
-            JDBSLOTGameSeeder::class,
-            JDBSFishingameSeeder::class,
-            JDBOtherGameSeeder::class,
-            PlayStarGameSeeder::class,
-            CT855CasinoGameSeeder::class,
-            CQ9SlotGameSeeder::class,
-            CQ9FishingGameSeeder::class,
-            JILISlotGameSeeder::class,
-            JILICasinoGameSeeder::class,
-            JILIFishingGameSeeder::class,
-            JILIPokerGameSeeder::class,
-            HACKSAWSlotGameSeeder::class,
-            // HACKSAWOtherGameSeeder::class,
-            ImoonOtherGameSeeder::class,
-            EpicwinGameSeeder::class,
-            FACHAISLOTGameSeeder::class,
-            FACHAIFishingGameSeeder::class,
-            Rich88SlotGameSeeder::class,
-            N2SlotGameSeeder::class,
-            AILiveCasinoGameSeeder::class,
-            AIPokerGameSeeder::class,
-            SmartSoftGameSeeder::class,
-            WorldEntertainmentSlotGameSeeder::class,
-            IBCSPORTBOOKSeeder::class,
-            IBCVIRTUAL_SPORTSeeder::class,
-            IBCOTHERSeeder::class,
-            advantplaySeeder::class,
-            MRSlottySlotSeeder::class,
-            MRSlottyLOTTERYSeeder::class,
-            MRSlottyOTHERSeeder::class,
-            MRSlottyPlayAceSlotSeeder::class,
-            PlayAceLIVE_CASINOSeeder::class,
-            BoomingGamesSlotSeeder::class,
-            SpribeOtherSeeder::class,
-            WOWGamingPokerSeeder::class,
-            WOWGamingSLOTSeeder::class,
-            WOWGamingP2PSeeder::class,
-            BIGPOTSlotSeeder::class,
-            pascal_gamingSlotSeeder::class,
-            AviatrixOtherSeeder::class,
             HeadCloseSeeder::class,
             ChooseDigitSeeder::class,
             BattleTableSeeder::class,
             OperatorSeeder::class,
             TwoDLimitSeeder::class,
             ShanProductSeeder::class,
-            MrSlotyBoonGoSlotSeeder::class,
-            MrSlotyFaziSlotSeeder::class,
-            MrSlotyFelixSlotSeeder::class,
-            MrSlotyFuntaSlotSeeder::class,
-            MrSlotyGamingWorldSlotSeeder::class,
-            MrSlotyKAGamingSlotSeeder::class,
-            MrSlotyKironSlotSeeder::class,
-            MrSlotyVoltSlotSeeder::class,
-            MrSlotyRerakeSlotSeeder::class,
-            MrSlotyZuesPlaySlotSeeder::class
         ]);
     }
 }
