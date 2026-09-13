@@ -153,13 +153,19 @@ First inspect what would be disabled:
 php artisan provider:disable-legacy
 ```
 
-This is a dry run. After reviewing the printed product list:
+The command is dry-run by default. It preserves `ppslot` and the first-party `shankomee` provider key by default. If another first-party provider must remain, pass an explicit keep list, for example:
+
+```bash
+php artisan provider:disable-legacy --keep=ppslot,shankomee,my-local-provider
+```
+
+After reviewing the printed product list, persist the change:
 
 ```bash
 php artisan provider:disable-legacy --apply
 ```
 
-The command disables non-PPSLOT provider products and games without deleting historical rows. It does not remove transaction/report history.
+The command disables the selected legacy external provider products and games without deleting historical rows. It does not remove transaction/report history.
 
 Legacy GSCPlus seamless callbacks and the old generic provider transaction callback are no longer registered in `routes/api.php`. PPSLOT callbacks are the only external provider wallet endpoints exposed by the application.
 
