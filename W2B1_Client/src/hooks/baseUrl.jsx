@@ -1,5 +1,5 @@
-// const BASE_URL = 'https://delightmyanmarthb.xyz/api';
-//const BASE_URL = 'https://lion11.online/api';
-const BASE_URL = 'https://gamestar77.online/api';
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+const BASE_URL = (configuredBaseUrl || `${window.location.origin}/api`).replace(/\/$/, '');
 
 export default BASE_URL;
