@@ -1,5 +1,6 @@
-import { createContext, useEffect, useState, useMemo } from "react";
+import { createContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import BASE_URL from "../hooks/baseUrl";
 
 const AuthContext = createContext({
     auth: null,
@@ -20,7 +21,7 @@ const AuthContextProvider = ({ children }) => {
         setToken(null);
         setProfile(null);
         navigate('/?type=all');
-    }
+    };
 
     useEffect(() => {
         if (token) {
@@ -32,49 +33,47 @@ const AuthContextProvider = ({ children }) => {
     }, [token]);
 
     useEffect(() => {
-        if (token) {
-            const interval = setInterval(() => {
-                fetch('https://gamestar77.online/api/user', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json',
-                    }
-                })
+        if (!token) {
+            return undefined;
+        }
+
+        const refreshProfile = () => {
+            fetch(`${BASE_URL}/user`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                }
+            })
                 .then(res => {
                     if (res.status === 401) {
                         logout();
                         return Promise.reject('Unauthorized');
                     }
                     if (!res.ok) {
-                        return Promise.reject('Failed to fetch balance');
+                        return Promise.reject('Failed to fetch profile');
                     }
                     return res.json();
                 })
                 .then(data => {
-                    if (data && data.data) {
+                    if (data?.data) {
                         setProfile(currentProfile => {
-                            if (
-                                !currentProfile ||
-                                currentProfile.balance !== data.data.balance ||
-                                currentProfile.main_balance !== data.data.main_balance
-                            ) {
-                                const updatedProfile = { ...currentProfile, ...data.data };
-                                localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
-                                return updatedProfile;
-                            }
-                            return currentProfile;
+                            const updatedProfile = { ...currentProfile, ...data.data };
+                            localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
+                            return updatedProfile;
                         });
                     }
                 })
                 .catch(error => {
                     if (error !== 'Unauthorized') {
-                        // console.error("Error fetching real-time balance:", error);
+                        console.error('Profile refresh failed:', error);
                     }
                 });
-            }, 5000); // Fetch every 5 seconds
+        };
 
-            return () => clearInterval(interval);
-        }
+        refreshProfile();
+        const interval = setInterval(refreshProfile, 10000);
+
+        return () => clearInterval(interval);
     }, [token]);
 
     const updateProfile = (newProfile) => {
