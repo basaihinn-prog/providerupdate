@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\Games\GameEngine;
+use App\Services\Games\Fish1Engine;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
