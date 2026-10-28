@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('fish_engine_sessions', function (Blueprint $table) {
             $table->id();
+            $table->uuid('session_uuid')->unique();
             $table->foreignId('player_id')->constrained('users')->cascadeOnDelete();
             $table->string('game_key', 100);
             $table->string('engine_version', 80);
