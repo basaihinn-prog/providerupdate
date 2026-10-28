@@ -57,7 +57,6 @@ class FishLaunchTicketController extends Controller
             'message' => 'Fish launch ticket issued.',
             'launch_ticket' => $ticket,
             'expires_at' => gmdate(DATE_ATOM, $claims['exp']),
-            'session_endpoint' => (string) ($config['session_endpoint'] ?? ''),
         ])->header('Cache-Control', 'no-store');
     }
 
