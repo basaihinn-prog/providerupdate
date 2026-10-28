@@ -10,5 +10,4 @@ return [
     // One configured game key prevents callers from selecting arbitrary games.
     'game' => env('FISH_GAME_KEY', ''),
     'ticket_ttl_seconds' => (int) env('FISH_LAUNCH_TICKET_TTL_SECONDS', 90),
-    'session_endpoint' => env('FISH_SESSION_ENDPOINT', ''),
 ];
