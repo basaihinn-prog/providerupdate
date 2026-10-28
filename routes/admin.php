@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\WagerListController;
 use App\Http\Controllers\Admin\WinnerTextController;
 use App\Http\Controllers\Admin\WithDrawRequestController;
 use App\Http\Controllers\Admin\LogController;
+use App\Http\Controllers\Admin\FishRtpController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,10 @@ Route::group([
 
     // Role-based Dashboard
     Route::get('/', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('home');
+
+    // Fish1 RTP monitoring/configuration; controller enforces Owner type.
+    Route::get('fish-rtp', [FishRtpController::class, 'index'])->name('fish-rtp.index');
+    Route::post('fish-rtp', [FishRtpController::class, 'store'])->name('fish-rtp.store');
 
     Route::post('balance-up', [HomeController::class, 'balanceUp'])->name('balanceUp');
 
