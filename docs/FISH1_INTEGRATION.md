@@ -16,7 +16,6 @@ Laravel issues a short-lived HS256 JWT containing `iss`, `aud`, `sub`, `shop_id`
 - `FISH_SHOP_ID`: authorized shop/operator identifier.
 - `FISH_GAME_KEY`: fixed game identifier permitted for this deployment.
 - `FISH_LAUNCH_TICKET_TTL_SECONDS=90` (capped at 120 seconds).
-- `FISH_SESSION_ENDPOINT`: private session-service URL, if needed by the trusted caller.
 
 After changing environment configuration, clear/rebuild Laravel config cache using the normal deployment procedure.
 
