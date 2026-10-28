@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\DigitGame\DigitSlotController;
 use App\Http\Controllers\Api\V1\Game\GSCPlusProviderController;
 use App\Http\Controllers\Api\V1\Game\LaunchGameController;
 use App\Http\Controllers\Api\V1\Game\FishLaunchTicketController;
+use App\Http\Controllers\Api\V1\Game\FishSettlementController;
 use App\Http\Controllers\Api\V1\Game\PpSlotWalletController;
 use App\Http\Controllers\Api\V1\Game\ShanLaunchGameController;
 use App\Http\Controllers\Api\V1\PromotionController;
@@ -31,6 +32,9 @@ Route::post('/player-change-password', [AuthController::class, 'playerChangePass
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::post('/test-db-transaction', [TestDBTransactionController::class, 'PurseService']);
 
+// Signed server-to-server fish settlement. Not a browser/player endpoint.
+Route::post('/fish/settle', [FishSettlementController::class, 'settle'])->middleware('throttle:120,1');
+
 // External PPSLOT / updatesky wallet protocol; not used by fish1.
 Route::prefix('provider/ppslot')->group(function () {
     Route::post('Cash/Get', [PpSlotWalletController::class, 'balance']);
@@ -42,6 +46,11 @@ Route::post('/transactions', [ShanTransactionController::class, 'ShanTransaction
 Route::middleware('auth:sanctum')->group(function () {
     // Dedicated fish1 session bootstrap. It does not settle gameplay transactions.
     Route::post('/fish/launch-ticket', [FishLaunchTicketController::class, 'issue'])->middleware('throttle:10,1');
+
+    // Owner-only RTP reporting/configuration. Targets are audit metadata, not outcome overrides.
+    Route::get('/fish/admin/rtp', [FishSettlementController::class, 'report'])->middleware('throttle:30,1');
+    Route::put('/fish/admin/rtp/{gameKey}', [FishSettlementController::class, 'updateTarget'])
+        ->where('gameKey', '[A-Za-z0-9._:-]+')->middleware('throttle:10,1');
 
     Route::post('/user/balance', [UserController::class, 'updateBalance']);
     Route::post('/game/log', [PythonGameController::class, 'storeGameLog']);
