@@ -19,6 +19,10 @@ Laravel issues a short-lived HS256 JWT containing `iss`, `aud`, `sub`, `shop_id`
 
 After changing environment configuration, clear/rebuild Laravel config cache using the normal deployment procedure.
 
+## fish1 launch bridge
+
+The companion fish1 branch adds a private launch bridge: an authenticated player portal passes its Sanctum bearer token to the fish launch page using origin-allowlisted `postMessage`; the bridge forwards that token to this endpoint and submits the returned one-time ticket to the private PostgreSQL session service. The ticket is not exposed to the browser. See [fish1 PR #4](https://github.com/basaihinn-prog/fish1/pull/4) for the current bridge implementation and environment contract.
+
 ## Integration boundary
 
 This endpoint establishes authenticated, one-time session-ticket issuance. The existing fish1 session service consumes the ticket and creates a PostgreSQL session. It does not implement the Cocos client's full legacy gameplay API, real-time fish simulation, or authoritative bet/win wallet settlement. Do not remove the old demo compatibility layer or route production traffic until the client API contract has been mapped and those missing services are implemented and tested. Do not use Buffalo endpoints or PPSLOT callback endpoints as a substitute.
