@@ -41,7 +41,7 @@ Route::post('/transactions', [ShanTransactionController::class, 'ShanTransaction
 
 Route::middleware('auth:sanctum')->group(function () {
     // Dedicated fish1 session bootstrap. It does not settle gameplay transactions.
-    Route::post('/fish/launch-ticket', [FishLaunchTicketController::class, 'issue']);
+    Route::post('/fish/launch-ticket', [FishLaunchTicketController::class, 'issue'])->middleware('throttle:10,1');
 
     Route::post('/user/balance', [UserController::class, 'updateBalance']);
     Route::post('/game/log', [PythonGameController::class, 'storeGameLog']);
