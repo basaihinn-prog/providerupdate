@@ -1,33 +1,34 @@
 <?php
 
-use App\Http\Controllers\Api\Player\GameLogController;
-use App\Http\Controllers\Api\Player\TransactionController;
-use App\Http\Controllers\Api\V1\Auth\AuthController;
-use App\Http\Controllers\Api\V1\Auth\ProfileController;
-use App\Http\Controllers\Api\ShootGame\UserController;
-use App\Http\Controllers\Api\ShootGame\PythonGameController;
-use App\Http\Controllers\Api\TestDBTransactionController;
-use App\Http\Controllers\Api\V1\BannerController;
-use App\Http\Controllers\Api\V1\ContactController;
-use App\Http\Controllers\Api\V1\Dashboard\AdminLoginController;
-use App\Http\Controllers\Api\V1\DepositRequestController;
-use App\Http\Controllers\Api\V1\DigitGame\DigitBetController;
-use App\Http\Controllers\Api\V1\DigitGame\DigitSlotController;
-use App\Http\Controllers\Api\V1\Game\GSCPlusProviderController;
-use App\Http\Controllers\Api\V1\Game\LaunchGameController;
-use App\Http\Controllers\Api\V1\Game\PpSlotWalletController;
-use App\Http\Controllers\Api\V1\Game\ShanLaunchGameController;
-use App\Http\Controllers\Api\V1\Promotion\PromotionController as PromotionControllerAlias;
-use App\Http\Controllers\Api\V1\PromotionController;
-use App\Http\Controllers\Api\V1\Shan\ShanGetBalanceController;
-use App\Http\Controllers\Api\V1\Shan\ShanTransactionController;
-use App\Http\Controllers\Api\V1\TwoDigit\TwoDigitBetController;
-use App\Http\Controllers\Api\V1\Wallet\WalletController;
-use App\Http\Controllers\Api\V1\WithDrawRequestController;
-use App\Http\Controllers\Api\V2\Shan\ShankomeeGetBalanceController;
-use App\Http\Controllers\Api\V1\Game\BuffaloGameController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\\Http\\Controllers\\Api\\Player\\GameLogController;
+use App\\Http\\Controllers\\Api\\Player\\TransactionController;
+use App\\Http\\Controllers\\Api\\V1\\Auth\\AuthController;
+use App\\Http\\Controllers\\Api\\V1\\Auth\\ProfileController;
+use App\\Http\\Controllers\\Api\\ShootGame\\UserController;
+use App\\Http\\Controllers\\Api\\ShootGame\\PythonGameController;
+use App\\Http\\Controllers\\Api\\TestDBTransactionController;
+use App\\Http\\Controllers\\Api\\V1\\BannerController;
+use App\\Http\\Controllers\\Api\\V1\\ContactController;
+use App\\Http\\Controllers\\Api\\V1\\Dashboard\\AdminLoginController;
+use App\\Http\\Controllers\\Api\\V1\\DepositRequestController;
+use App\\Http\\Controllers\\Api\\V1\\DigitGame\\DigitBetController;
+use App\\Http\\Controllers\\Api\\V1\\DigitGame\\DigitSlotController;
+use App\\Http\\Controllers\\Api\\V1\\Game\\GSCPlusProviderController;
+use App\\Http\\Controllers\\Api\\V1\\Game\\LaunchGameController;
+use App\\Http\\Controllers\\Api\\V1\\Game\\FishLaunchTicketController;
+use App\\Http\\Controllers\\Api\\V1\\Game\\PpSlotWalletController;
+use App\\Http\\Controllers\\Api\\V1\\Game\\ShanLaunchGameController;
+use App\\Http\\Controllers\\Api\\V1\\Promotion\\PromotionController as PromotionControllerAlias;
+use App\\Http\\Controllers\\Api\\V1\\PromotionController;
+use App\\Http\\Controllers\\Api\\V1\\Shan\\ShanGetBalanceController;
+use App\\Http\\Controllers\\Api\\V1\\Shan\\ShanTransactionController;
+use App\\Http\\Controllers\\Api\\V1\\TwoDigit\\TwoDigitBetController;
+use App\\Http\\Controllers\\Api\\V1\\Wallet\\WalletController;
+use App\\Http\\Controllers\\Api\\V1\\WithDrawRequestController;
+use App\\Http\\Controllers\\Api\\V2\\Shan\\ShankomeeGetBalanceController;
+use App\\Http\\Controllers\\Api\\V1\\Game\\BuffaloGameController;
+use Illuminate\\Http\\Request;
+use Illuminate\\Support\\Facades\\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
@@ -35,9 +36,7 @@ Route::post('/player-change-password', [AuthController::class, 'playerChangePass
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::post('/test-db-transaction', [TestDBTransactionController::class, 'PurseService']);
 
-// PPSLOT / updatesky is the only external game-provider wallet protocol exposed.
-// Configure the updatesky merchant Address as:
-// https://YOUR-DOMAIN/api/provider/ppslot
+// PPSLOT / updatesky external provider wallet protocol. This is not the fish1 session API.
 Route::prefix('provider/ppslot')->group(function () {
     Route::post('Cash/Get', [PpSlotWalletController::class, 'balance']);
     Route::post('Cash/TransferInOut', [PpSlotWalletController::class, 'transfer']);
@@ -46,13 +45,15 @@ Route::prefix('provider/ppslot')->group(function () {
 Route::post('/transactions', [ShanTransactionController::class, 'ShanTransactionCreate'])->middleware('transaction');
 
 Route::group(['middleware' => ['auth:sanctum']], function () {
+    // Dedicated fish1 session bootstrap. This does not perform wallet settlement.
+    Route::post('/fish/launch-ticket', [FishLaunchTicketController::class, 'issue']);
+
     // python game api
     Route::post('/user/balance', [UserController::class, 'updateBalance']);
     Route::post('/game/log', [PythonGameController::class, 'storeGameLog']);
     Route::post('/game/stats', [PythonGameController::class, 'updateGameStats']);
 
-    // Provider-agnostic application route. Provider-specific translation happens
-    // in the adapter selected by ProviderManager; production default is PPSLOT.
+    // Provider-agnostic application route. Provider-specific translation happens in the adapter.
     Route::post('/games/launch', [LaunchGameController::class, 'launchGame']);
     Route::post('/seamless/launch-game', [LaunchGameController::class, 'launchGame']);
 
@@ -74,7 +75,6 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
     // Player game logs
     Route::get('/player/game-logs', [GameLogController::class, 'index']);
-    Route::get('user', [AuthController::class, 'getUser']);
 
     // 2d route
     Route::post('/twod-bet', [TwoDigitBetController::class, 'store']);
@@ -121,7 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/digit-slot/bet', [DigitSlotController::class, 'bet']);
 });
 
-// Buffalo Game API routes
+// Buffalo routes are unrelated to fish1 and remain isolated.
 Route::prefix('buffalo')->group(function () {
     Route::post('/get-user-balance', [BuffaloGameController::class, 'getUserBalance']);
     Route::post('/change-balance', [BuffaloGameController::class, 'changeBalance']);
