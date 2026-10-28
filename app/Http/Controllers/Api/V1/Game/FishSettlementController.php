@@ -29,7 +29,7 @@ class FishSettlementController extends Controller
             'player_id' => ['required', 'integer', 'min:1'],
             'game_key' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._:-]+$/'],
             'round_id' => ['required', 'string', 'max:160', 'regex:/^[A-Za-z0-9._:-]+$/'],
-            'currency' => ['sometimes', 'string', 'size:3'],
+            'currency' => ['sometimes', 'string', 'size:3', 'in:MMK'],
             'bet_amount' => ['required', 'numeric', 'gt:0', 'max:1000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
             'payout_amount' => ['required', 'numeric', 'min:0', 'max:1000000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
             'metadata' => ['sometimes', 'array'],
@@ -67,7 +67,8 @@ class FishSettlementController extends Controller
                 if ($existing) {
                     $same = (int) $existing->player_id === (int) $player->id
                         && $this->toMinorUnits((string) $existing->bet_amount) === $bet
-                        && $this->toMinorUnits((string) $existing->payout_amount) === $payout;
+                        && $this->toMinorUnits((string) $existing->payout_amount) === $payout
+                        && strtoupper((string) $existing->currency) === strtoupper($data['currency'] ?? 'MMK');
                     if (! $same) {
                         return ['status' => 409, 'body' => ['message' => 'Round ID already used with different settlement data.']];
                     }
