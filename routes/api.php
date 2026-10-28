@@ -47,6 +47,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dedicated fish1 session bootstrap. It does not settle gameplay transactions.
     Route::post('/fish/launch-ticket', [FishLaunchTicketController::class, 'issue'])->middleware('throttle:10,1');
 
+    // Opt-in server-owned simulation. Wallet settlement remains disabled until canonical wallet integration is tested.
+    Route::post('/fish/engine/sessions', [FishEngineController::class, 'start'])->middleware('throttle:30,1');
+    Route::get('/fish/engine/sessions/{sessionId}', [FishEngineController::class, 'state'])->middleware('throttle:120,1');
+    Route::post('/fish/engine/sessions/{sessionId}/commands', [FishEngineController::class, 'command'])->middleware('throttle:120,1');
+
     // Owner-only RTP reporting/configuration. Targets are audit metadata, not outcome overrides.
     Route::get('/fish/admin/rtp', [FishSettlementController::class, 'report'])->middleware('throttle:30,1');
     Route::put('/fish/admin/rtp/{gameKey}', [FishSettlementController::class, 'updateTarget'])
