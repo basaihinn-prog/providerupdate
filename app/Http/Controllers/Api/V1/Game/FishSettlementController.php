@@ -41,6 +41,14 @@ class FishSettlementController extends Controller
 
         $data = $validator->validated();
         $gameKey = $data['game_key'];
+        $configuredGame = (string) config('fish_session.game', '');
+        if ($configuredGame === '') {
+            return response()->json(['message' => 'Fish game settlement is not configured.'], 503);
+        }
+        if (! hash_equals($configuredGame, $gameKey)) {
+            return response()->json(['message' => 'Game key is not registered for this settlement service.'], 403);
+        }
+
         $roundId = $data['round_id'];
         $bet = $this->toMinorUnits((string) $data['bet_amount']);
         $payout = $this->toMinorUnits((string) $data['payout_amount']);
