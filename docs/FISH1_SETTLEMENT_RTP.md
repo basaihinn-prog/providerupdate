@@ -50,6 +50,10 @@ JSON example (only from the trusted backend):
 
 Signature generation must use the exact bytes sent as the body. The request timestamp must be within the configured window. Use TLS between servers and restrict network access where practical. A successful response is not a substitute for reconciling wallet and round records.
 
+## RTP admin page
+
+The owner-only web page is available at `/admin/fish-rtp` after migrations run. It shows per-game recorded stakes, gross payouts, measured RTP, target/version, and the latest configuration audit events. Its form writes the same configuration and audit tables as the API. It is not a game-math editor and cannot change individual outcomes.
+
 ## RTP owner APIs
 
 Both routes require a Sanctum-authenticated user whose `users.type` is Owner (10):
