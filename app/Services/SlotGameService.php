@@ -134,7 +134,7 @@ class SlotGameService
 
             return $legacyResult;
             }, 3);
-        } catch (\\App\\Exceptions\\BuffaloSpinReplayException $replay) {
+        } catch (\App\Exceptions\BuffaloSpinReplayException $replay) {
             return $replay->legacyResult;
         }
     }
@@ -265,10 +265,10 @@ class SlotGameService
                 if (! empty($settlementResult['duplicate'])) {
                     $replay = $settlementResult['engine_result'] ?? null;
                     if (is_array($replay)) {
-                        throw new \\App\\Exceptions\\BuffaloSpinReplayException($replay);
+                        throw new \App\Exceptions\BuffaloSpinReplayException($replay);
                     }
 
-                    throw new \\RuntimeException('Duplicate settlement exists without a saved spin response; reconciliation is required.');
+                    throw new \RuntimeException('Duplicate settlement exists without a saved spin response; reconciliation is required.');
                 }
                 $lockedUser->refresh();
             }
