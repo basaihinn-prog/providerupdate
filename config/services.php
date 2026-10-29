@@ -38,6 +38,7 @@ return [
     // Locally hosted Buffalo Cocos build; leave unset until the static build is deployed over HTTPS.
     'buffalo' => [
         'game_url' => env('BUFFALO_GAME_URL'),
+        'api_url' => env('BUFFALO_API_URL'),
         'game_code' => env('BUFFALO_GAME_CODE', 'Buffalo'),
     ],
 
