@@ -74,7 +74,6 @@ class SlotGameService
             $existing = \App\Models\GameRoundSettlement::query()
                 ->where('provider', 'buffalo')
                 ->where('round_id', $requestId)
-                ->lockForUpdate()
                 ->first();
 
             if ($existing !== null) {
