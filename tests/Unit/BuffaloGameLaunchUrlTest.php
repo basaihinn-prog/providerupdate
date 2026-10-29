@@ -23,6 +23,7 @@ class BuffaloGameLaunchUrlTest extends TestCase
         config([
             'app.url' => 'https://api.example.test',
             'services.buffalo.game_url' => 'https://games.example.test/buffalo/index.html',
+            'services.buffalo.api_url' => 'https://api.example.test/api/',
             'services.buffalo.game_code' => 'Buffalo',
         ]);
 
@@ -37,6 +38,7 @@ class BuffaloGameLaunchUrlTest extends TestCase
         $this->assertSame('https://games.example.test/buffalo/index.html', strtok($url, '?'));
         $this->assertSame('23', $query['gameId']);
         $this->assertSame('2', $query['roomId']);
+        $this->assertSame('https://api.example.test/api/', $query['apiUrl']);
         $this->assertStringStartsWith('gam', $query['id']);
         $this->assertSame(31, strlen($query['id']));
         $this->assertNotEmpty($query['passcode']);
