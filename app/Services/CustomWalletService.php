@@ -250,7 +250,7 @@ class CustomWalletService
             || $gameCode === '' || strlen($gameCode) > 100
             || bccomp($bet, '0.00', 2) < 0 || bccomp($win, '0.00', 2) < 0
             || (bccomp($bet, '0.00', 2) === 0 && bccomp($win, '0.00', 2) === 0)) {
-            throw new \\InvalidArgumentException('Invalid game settlement payload.');
+            throw new \InvalidArgumentException('Invalid game settlement payload.');
         }
 
         $requestHash = hash('sha256', json_encode([
@@ -266,7 +266,7 @@ class CustomWalletService
         try {
             return DB::transaction(function () use ($user, $provider, $roundId, $gameCode, $bet, $win, $meta, $requestHash) {
                 // Insert the idempotency key first. The DB unique constraint serializes duplicate keys.
-                $settlement = \\App\\Models\\GameRoundSettlement::create([
+                $settlement = \App\Models\GameRoundSettlement::create([
                     'provider' => $provider,
                     'round_id' => $roundId,
                     'user_id' => $user->getKey(),
@@ -283,7 +283,7 @@ class CustomWalletService
                 $before = number_format((float) $lockedUser->balance, 2, '.', '');
 
                 if (bccomp($before, $bet, 2) < 0) {
-                    throw new \\RuntimeException('Insufficient balance for Buffalo spin.');
+                    throw new \RuntimeException('Insufficient balance for Buffalo spin.');
                 }
 
                 $afterBet = bcsub($before, $bet, 2);
@@ -348,9 +348,9 @@ class CustomWalletService
 
                 return $result;
             }, 3);
-        } catch (\\Illuminate\\Database\\QueryException $exception) {
+        } catch (\Illuminate\Database\QueryException $exception) {
             // A unique-key conflict means another request already committed this round.
-            $existing = \\App\\Models\\GameRoundSettlement::query()
+            $existing = \App\Models\GameRoundSettlement::query()
                 ->where('provider', $provider)
                 ->where('round_id', $roundId)
                 ->first();
@@ -361,11 +361,11 @@ class CustomWalletService
 
             if ((int) $existing->user_id !== (int) $user->getKey()
                 || ! hash_equals((string) $existing->request_hash, $requestHash)) {
-                throw new \\RuntimeException('Idempotency key was reused with a different settlement payload.');
+                throw new \RuntimeException('Idempotency key was reused with a different settlement payload.');
             }
 
             if ($existing->status !== 'completed' || ! is_array($existing->response)) {
-                throw new \\RuntimeException('Settlement key exists but is not completed; manual reconciliation is required.');
+                throw new \RuntimeException('Settlement key exists but is not completed; manual reconciliation is required.');
             }
 
             return array_merge($existing->response, ['duplicate' => true]);
