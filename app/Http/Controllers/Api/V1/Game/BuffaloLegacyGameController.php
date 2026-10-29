@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Game;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\BuffaloGameService;
+use App\Services\SlotGameService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,9 +16,7 @@ class BuffaloLegacyGameController extends Controller
     }
 
     /**
-     * Read-only compatibility endpoint for the legacy Cocos client.
-     * This deliberately does not create a gameplay session: the authoritative
-     * slot engine/session adapter has not yet been integrated into providerupdate.
+     * Bootstrap a server-owned Buffalo slot session for the legacy Cocos client.
      */
     public function startInfo(Request $request): JsonResponse
     {
@@ -46,7 +45,7 @@ class BuffaloLegacyGameController extends Controller
             return response()->json(['status' => 'incorrect credential'], 401);
         }
 
-        return response()->json(['status' => 'ok', 'gameplayEnabled' => false]);
+        return response()->json(['status' => 'ok', 'gameplayEnabled' => true]);
     }
 
     public function exit(Request $request): JsonResponse
@@ -70,7 +69,8 @@ class BuffaloLegacyGameController extends Controller
             'request_id' => ['required', 'string', 'min:16', 'max:128', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
 
-        if (! $this->resolvePlayer($request)) {
+        $user = $this->resolvePlayer($request);
+        if (! $user) {
             return response()->json(['status' => 'incorrect credential'], 401);
         }
 
@@ -91,13 +91,13 @@ class BuffaloLegacyGameController extends Controller
                 'status' => 'ok',
                 'message' => 'Spin completed',
             ], $outcome));
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             return response()->json([
                 'status' => 'error',
                 'message' => $exception->getMessage(),
             ], 400);
-        } catch (\\Throwable $exception) {
-            \\Illuminate\\Support\\Facades\\Log::error('Buffalo authoritative spin failed', [
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::error('Buffalo authoritative spin failed', [
                 'user_id' => $user->id,
                 'request_id' => $request->input('request_id'),
                 'error' => $exception->getMessage(),
