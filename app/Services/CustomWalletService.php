@@ -352,6 +352,7 @@ class CustomWalletService
             $existing = \App\Models\GameRoundSettlement::query()
                 ->where('provider', $provider)
                 ->where('round_id', $roundId)
+                ->lockForUpdate()
                 ->first();
 
             if (! $existing) {
