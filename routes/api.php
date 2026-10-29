@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\TwoDigit\TwoDigitBetController;
 use App\Http\Controllers\Api\V1\WithDrawRequestController;
 use App\Http\Controllers\Api\V2\Shan\ShankomeeGetBalanceController;
 use App\Http\Controllers\Api\V1\Game\BuffaloGameController;
+use App\Http\Controllers\Api\V1\Game\BuffaloLegacyGameController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -115,6 +116,22 @@ Route::prefix('shan')->group(function () {
 Route::prefix('provider/shan')->group(function () {
     Route::post('ShanGetBalances', [ShankomeeGetBalanceController::class, 'shangetbalance']);
     Route::post('ShanLaunchGame', [ShankomeeGetBalanceController::class, 'LaunchGame']);
+});
+
+// Buffalo Cocos client calls these exact paths on its configured API base URL.
+Route::middleware('throttle:120,1')->group(function () {
+    Route::post('/start_info', [BuffaloLegacyGameController::class, 'startInfo']);
+    Route::post('/ping', [BuffaloLegacyGameController::class, 'ping']);
+    Route::post('/bet', [BuffaloLegacyGameController::class, 'bet']);
+    Route::post('/exit', [BuffaloLegacyGameController::class, 'exit']);
+});
+
+// Legacy Buffalo Cocos contract. Bet is explicitly fail-closed until authoritative settlement is integrated.
+Route::prefix('buffalo/legacy')->middleware('throttle:120,1')->group(function () {
+    Route::post('/start_info', [BuffaloLegacyGameController::class, 'startInfo']);
+    Route::post('/ping', [BuffaloLegacyGameController::class, 'ping']);
+    Route::post('/bet', [BuffaloLegacyGameController::class, 'bet']);
+    Route::post('/exit', [BuffaloLegacyGameController::class, 'exit']);
 });
 
 // Buffalo API remains isolated and is not part of fish1 integration.

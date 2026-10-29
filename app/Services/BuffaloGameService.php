@@ -107,24 +107,53 @@ class BuffaloGameService
     }
 
     /**
-     * Generate Buffalo game URL (Exact format from provider)
-     * Based on provider examples: http://prime7.wlkfkskakdf.com/?gameId=23&roomId=1&uid=...&token=...&lobbyUrl=...
+     * Build a launch URL for the locally hosted Buffalo Cocos build.
+     *
+     * The legacy Cocos build reads apiUrl from the query string so its requests reach providerupdate even when assets use another host.
+     * Real-money play must remain disabled until staging tests pass.
      */
     public static function generateGameUrl(User $user, int $roomId = 1, string $lobbyUrl = ''): string
     {
-        // Use HTTP exactly as provider examples show
-        $baseUrl = 'http://prime7.wlkfkskakdf.com/';
-        $gameId = 23; // Buffalo game ID from provider examples
-        
-        // Use provided lobby URL or default to production site
-        $finalLobbyUrl = $lobbyUrl ?: 'https://africanbuffalo.vip';
-        
-        // Generate the base URL without auth (auth will be added by controller)
-        $gameUrl = $baseUrl . '?gameId=' . $gameId . 
-                   '&roomId=' . $roomId . 
-                   '&lobbyUrl=' . urlencode($finalLobbyUrl);
-        
-        return $gameUrl;
+        $baseUrl = trim((string) config('services.buffalo.game_url', ''));
+
+        if ($baseUrl === '' || !filter_var($baseUrl, FILTER_VALIDATE_URL)) {
+            throw new \RuntimeException('Buffalo local game URL is not configured or is invalid.');
+        }
+
+        $scheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
+        if ($scheme !== 'https' && ! (app()->environment(['local', 'testing']) && $scheme === 'http')) {
+            throw new \RuntimeException('Buffalo game URL must use HTTPS outside local/testing environments.');
+        }
+
+        $auth = self::generateBuffaloAuth($user);
+        $appUrl = (string) config('app.url', '');
+        $domain = (string) parse_url($appUrl, PHP_URL_HOST);
+        $finalLobbyUrl = $lobbyUrl !== '' ? $lobbyUrl : $appUrl;
+        $apiUrl = trim((string) config('services.buffalo.api_url', ''));
+        if ($apiUrl === '') {
+            $apiUrl = rtrim($appUrl, '/') . '/api/';
+        }
+        if (! filter_var($apiUrl, FILTER_VALIDATE_URL)) {
+            throw new \RuntimeException('Buffalo API URL is not configured as a valid absolute URL.');
+        }
+        $apiUrl = rtrim($apiUrl, '/') . '/';
+        $apiScheme = strtolower((string) parse_url($apiUrl, PHP_URL_SCHEME));
+        if ($apiScheme !== 'https' && ! (app()->environment(['local', 'testing']) && $apiScheme === 'http')) {
+            throw new \RuntimeException('Buffalo API URL must use HTTPS outside local/testing environments.');
+        }
+
+        $query = http_build_query([
+            'gameId' => 23,
+            'roomId' => $roomId,
+            'lobbyUrl' => $finalLobbyUrl,
+            'apiUrl' => $apiUrl,
+            'id' => $auth['uid'],
+            'passcode' => $auth['token'],
+            'game' => (string) config('services.buffalo.game_code', 'Buffalo'),
+            'domain' => $domain,
+        ]);
+
+        return $baseUrl . (str_contains($baseUrl, '?') ? '&' : '?') . $query;
     }
     
 

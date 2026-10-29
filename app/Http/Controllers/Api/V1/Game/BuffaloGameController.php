@@ -312,9 +312,6 @@ class BuffaloGameController extends Controller
         try {
             // Check if this is a Buffalo game request
             if ($request->provider_id === 23) { // Assuming 23 is Buffalo provider ID
-                // Generate Buffalo game authentication
-                $auth = BuffaloGameService::generateBuffaloAuth($user);
-                
                 // Get room configuration
                 $roomId = $request->room_id ?? 1; // Default to room 1
                 $availableRooms = BuffaloGameService::getAvailableRooms($user);
@@ -329,26 +326,21 @@ class BuffaloGameController extends Controller
                 
                 $roomConfig = $availableRooms[$roomId];
                 
-                // Generate Buffalo game URL (Production - HTTP as per provider format)
-                $lobbyUrl = 'https://africanbuffalo.vip';
-                $gameUrl = BuffaloGameService::generateGameUrl($user, $roomId, $lobbyUrl);
-                
-                // Add UID and token to the URL (exact provider format)
-                $gameUrl .= '&uid=' . $auth['uid'] . '&token=' . $auth['token'];
-                
+                // URL and legacy id/passcode parameters are configured for the local Cocos build.
+                // Never log the launch URL because it contains the player's short-lived launch credentials.
+                $gameUrl = BuffaloGameService::generateGameUrl($user, $roomId, (string) config('app.url'));
+
                 Log::info('Buffalo Game Launch', [
                     'user_id' => $user->id,
-                    'user_name' => $user->user_name,
                     'room_id' => $roomId,
-                    'game_url' => $gameUrl,
-                    'auth_data' => $auth
+                    'asset_host' => parse_url((string) config('services.buffalo.game_url', ''), PHP_URL_HOST),
                 ]);
                 
                 return response()->json([
                     'code' => 1,
                     'msg' => 'Game launched successfully',
                     'Url' => $gameUrl, // Compatible with existing frontend
-                    'game_url' => $gameUrl, // HTTP URL (exact provider format)
+                    'game_url' => $gameUrl, // Local Cocos build URL
                     'room_info' => $roomConfig,
                     'user_balance' => $user->balance,
                 ]);

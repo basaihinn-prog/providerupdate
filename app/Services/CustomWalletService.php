@@ -223,6 +223,157 @@ class CustomWalletService
     }
 
     /**
+     * Settle one authoritative Buffalo spin atomically and idempotently.
+     *
+     * The caller MUST supply amounts produced by the server-side slot engine,
+     * never values accepted directly from the browser. The unique provider/round
+     * key protects retries and concurrent duplicate requests.
+     *
+     * @return array{duplicate:bool,balance_before:string,balance_after:string,bet_amount:string,win_amount:string,net_amount:string,round_id:string}
+     */
+    public function settleGameRound(
+        User $user,
+        string $provider,
+        string $roundId,
+        string $gameCode,
+        float $betAmount,
+        float $winAmount,
+        array $meta = []
+    ): array {
+        $provider = strtolower(trim($provider));
+        $roundId = trim($roundId);
+        $gameCode = trim($gameCode);
+        $bet = number_format($betAmount, 2, '.', '');
+        $win = number_format($winAmount, 2, '.', '');
+
+        if ($provider === '' || strlen($provider) > 40 || $roundId === '' || strlen($roundId) > 128
+            || $gameCode === '' || strlen($gameCode) > 100
+            || trim((string) ($meta['request_fingerprint'] ?? '')) === ''
+            || bccomp($bet, '0.00', 2) < 0 || bccomp($win, '0.00', 2) < 0) {
+            throw new \InvalidArgumentException('Invalid game settlement payload.');
+        }
+
+        $requestHash = hash('sha256', json_encode([
+            'user_id' => (int) $user->getKey(),
+            'provider' => $provider,
+            'round_id' => $roundId,
+            'game_code' => $gameCode,
+            // Outcome and charged amount are server-engine results. A concurrent retry may
+            // recompute them; the stable request fingerprint decides whether to replay.
+            'request_fingerprint' => (string) ($meta['request_fingerprint'] ?? ''),
+        ], JSON_THROW_ON_ERROR));
+
+        try {
+            return DB::transaction(function () use ($user, $provider, $roundId, $gameCode, $bet, $win, $meta, $requestHash) {
+                // Insert the idempotency key first. The DB unique constraint serializes duplicate keys.
+                $settlement = \App\Models\GameRoundSettlement::create([
+                    'provider' => $provider,
+                    'round_id' => $roundId,
+                    'user_id' => $user->getKey(),
+                    'game_code' => $gameCode,
+                    'bet_amount' => $bet,
+                    'win_amount' => $win,
+                    'net_amount' => bcsub($win, $bet, 2),
+                    'request_hash' => $requestHash,
+                    'status' => 'processing',
+                    'meta' => $meta,
+                ]);
+
+                $lockedUser = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+                $before = number_format((float) $lockedUser->balance, 2, '.', '');
+
+                if (bccomp($before, $bet, 2) < 0) {
+                    throw new \RuntimeException('Insufficient balance for Buffalo spin.');
+                }
+
+                $afterBet = bcsub($before, $bet, 2);
+                $after = bcadd($afterBet, $win, 2);
+
+                // The wallet row, audit transactions, and idempotency record commit or roll back together.
+                $lockedUser->balance = $after;
+                $lockedUser->save();
+
+                if (bccomp($bet, '0.00', 2) > 0) {
+                    $this->logTransaction(
+                        $lockedUser,
+                        $lockedUser,
+                        (float) $bet,
+                        'withdraw',
+                        TransactionName::GameLoss,
+                        (float) $before,
+                        (float) $afterBet,
+                        array_merge($meta, [
+                            'provider' => $provider,
+                            'round_id' => $roundId,
+                            'game_code' => $gameCode,
+                            'transaction_type' => 'game_bet',
+                        ])
+                    );
+                }
+
+                if (bccomp($win, '0.00', 2) > 0) {
+                    $this->logTransaction(
+                        $lockedUser,
+                        $lockedUser,
+                        (float) $win,
+                        'deposit',
+                        TransactionName::GameWin,
+                        (float) $afterBet,
+                        (float) $after,
+                        array_merge($meta, [
+                            'provider' => $provider,
+                            'round_id' => $roundId,
+                            'game_code' => $gameCode,
+                            'transaction_type' => 'game_win',
+                        ])
+                    );
+                }
+
+                $result = [
+                    'duplicate' => false,
+                    'balance_before' => $before,
+                    'balance_after' => $after,
+                    'bet_amount' => $bet,
+                    'win_amount' => $win,
+                    'net_amount' => bcsub($win, $bet, 2),
+                    'round_id' => $roundId,
+                ];
+
+                $settlement->forceFill([
+                    'balance_before' => $before,
+                    'balance_after' => $after,
+                    'status' => 'completed',
+                    'response' => $result,
+                ])->save();
+
+                return $result;
+            }, 3);
+        } catch (\Illuminate\Database\QueryException $exception) {
+            // A unique-key conflict means another request already committed this round.
+            $existing = \App\Models\GameRoundSettlement::query()
+                ->where('provider', $provider)
+                ->where('round_id', $roundId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $existing) {
+                throw $exception;
+            }
+
+            if ((int) $existing->user_id !== (int) $user->getKey()
+                || ! hash_equals((string) $existing->request_hash, $requestHash)) {
+                throw new \RuntimeException('Idempotency key was reused with a different settlement payload.');
+            }
+
+            if ($existing->status !== 'completed' || ! is_array($existing->response)) {
+                throw new \RuntimeException('Settlement key exists but is not completed; manual reconciliation is required.');
+            }
+
+            return array_merge($existing->response, ['duplicate' => true]);
+        }
+    }
+
+    /**
      * Check if user has sufficient balance
      */
     public function hasBalance(User $user, float $amount): bool
