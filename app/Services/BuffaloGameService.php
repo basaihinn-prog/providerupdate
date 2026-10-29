@@ -117,12 +117,12 @@ class BuffaloGameService
         $baseUrl = trim((string) config('services.buffalo.game_url', ''));
 
         if ($baseUrl === '' || !filter_var($baseUrl, FILTER_VALIDATE_URL)) {
-            throw new \\RuntimeException('Buffalo local game URL is not configured or is invalid.');
+            throw new \RuntimeException('Buffalo local game URL is not configured or is invalid.');
         }
 
         $scheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
         if ($scheme !== 'https' && ! (app()->environment(['local', 'testing']) && $scheme === 'http')) {
-            throw new \\RuntimeException('Buffalo game URL must use HTTPS outside local/testing environments.');
+            throw new \RuntimeException('Buffalo game URL must use HTTPS outside local/testing environments.');
         }
 
         $auth = self::generateBuffaloAuth($user);
