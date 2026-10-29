@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
 
 class BuffaloLegacyGameController extends Controller
 {
+    public function __construct(private SlotGameService $slotGameService)
+    {
+    }
+
     /**
      * Read-only compatibility endpoint for the legacy Cocos client.
      * This deliberately does not create a gameplay session: the authoritative
@@ -23,19 +27,17 @@ class BuffaloLegacyGameController extends Controller
             return response()->json(['status' => 'incorrect credential'], 401);
         }
 
-        return response()->json([
-            'status' => 'ok',
-            'gameCode' => (string) $request->input('game', config('services.buffalo.game_code', 'Buffalo')),
-            'balance' => (float) $user->balance,
-            'bet' => 0,
-            'freeSpinCount' => 0,
-            'freeSpinTotal' => 0,
-            'freeSpinStatus' => '',
-            'freeSpinWinCount' => 0,
-            'freeSpinMultiply' => 1,
-            'gameplayEnabled' => false,
-            'message' => 'Read-only launch check only; gameplay session adapter is not configured.',
-        ]);
+        $payload = $this->slotGameService->legacyStartInfo(
+            $user,
+            $request->input('game'),
+            [
+                'domain' => $request->input('domain'),
+                'client_seed' => $request->input('client_seed'),
+                'legacy_uid' => $request->input('id'),
+            ]
+        );
+
+        return response()->json(array_merge($payload, ['gameplayEnabled' => true]));
     }
 
     public function ping(Request $request): JsonResponse
@@ -65,18 +67,48 @@ class BuffaloLegacyGameController extends Controller
             'game' => 'required|string|max:100',
             'domain' => 'required|string|max:255',
             'bet' => 'required|numeric|min:1',
+            'request_id' => ['required', 'string', 'min:16', 'max:128', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
 
         if (! $this->resolvePlayer($request)) {
             return response()->json(['status' => 'incorrect credential'], 401);
         }
 
-        // Fail closed. Do not mutate balances until a server-owned game session,
-        // idempotency key, and atomic bet+win settlement implementation are present.
-        return response()->json([
-            'status' => 'betting_disabled',
-            'message' => 'Buffalo gameplay settlement is not enabled on this backend.',
-        ], 503);
+        try {
+            $outcome = $this->slotGameService->legacySpin(
+                $user,
+                (float) $request->input('bet'),
+                $request->input('game'),
+                [
+                    'domain' => $request->input('domain'),
+                    'legacy_uid' => $request->input('id'),
+                    'request_id' => $request->input('request_id'),
+                    'client_seed' => $request->input('client_seed'),
+                ]
+            );
+
+            return response()->json(array_merge([
+                'status' => 'ok',
+                'message' => 'Spin completed',
+            ], $outcome));
+        } catch (\\RuntimeException $exception) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $exception->getMessage(),
+            ], 400);
+        } catch (\\Throwable $exception) {
+            \\Illuminate\\Support\\Facades\\Log::error('Buffalo authoritative spin failed', [
+                'user_id' => $user->id,
+                'request_id' => $request->input('request_id'),
+                'error' => $exception->getMessage(),
+                'payload' => $request->except(['passcode', 'token', 'api_key', 'secret_key']),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unable to process spin.',
+            ], 500);
+        }
     }
 
     private function resolvePlayer(Request $request): ?User
