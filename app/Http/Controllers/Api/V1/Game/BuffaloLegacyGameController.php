@@ -54,8 +54,8 @@ class BuffaloLegacyGameController extends Controller
             return response()->json(['status' => 'incorrect credential'], 401);
         }
 
-        // No server-owned game session exists yet, so there is nothing to settle or close.
-        return response()->json(['status' => 'ok', 'sessionClosed' => false]);
+        // The legacy client sends no session token on exit. Keep the server session active so pending free spins survive relaunch.
+        return response()->json(['status' => 'ok', 'sessionClosed' => false, 'gameplayEnabled' => true]);
     }
 
     public function bet(Request $request): JsonResponse
