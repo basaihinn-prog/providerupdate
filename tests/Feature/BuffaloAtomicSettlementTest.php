@@ -40,6 +40,22 @@ class BuffaloAtomicSettlementTest extends TestCase
         $this->assertSame(1, GameRoundSettlement::query()->where('provider', 'buffalo')->count());
     }
 
+    public function test_concurrent_retry_replays_original_engine_payout(): void
+    {
+        $user = $this->player(100.00);
+        $wallet = app(CustomWalletService::class);
+        $meta = ['request_fingerprint' => hash('sha256', 'same-spin')];
+
+        $first = $wallet->settleGameRound($user, 'buffalo', 'request-000000000005', 'BUFFALO1024', 10, 4, $meta);
+        $retry = $wallet->settleGameRound($user, 'buffalo', 'request-000000000005', 'BUFFALO1024', 10, 5, $meta);
+
+        $this->assertFalse($first['duplicate']);
+        $this->assertTrue($retry['duplicate']);
+        $this->assertSame('4.00', $retry['win_amount']);
+        $this->assertSame('94.00', (string) $user->fresh()->balance);
+        $this->assertSame(1, GameRoundSettlement::query()->where('round_id', 'request-000000000005')->count());
+    }
+
     public function test_reusing_round_id_with_different_payload_is_rejected(): void
     {
         $user = $this->player(100.00);
