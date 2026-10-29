@@ -70,7 +70,8 @@ class SlotGameService
         $meta['request_id'] = $requestId;
         $meta['request_fingerprint'] = $fingerprint;
 
-        return DB::transaction(function () use ($user, $game, $betAmount, $meta, $requestId, $fingerprint) {
+        try {
+            return DB::transaction(function () use ($user, $game, $betAmount, $meta, $requestId, $fingerprint) {
             $existing = \App\Models\GameRoundSettlement::query()
                 ->where('provider', 'buffalo')
                 ->where('round_id', $requestId)
@@ -132,7 +133,10 @@ class SlotGameService
             $settlement->save();
 
             return $legacyResult;
-        }, 3);
+            }, 3);
+        } catch (\\App\\Exceptions\\BuffaloSpinReplayException $replay) {
+            return $replay->legacyResult;
+        }
     }
 
     public function initProviderSession(
@@ -244,7 +248,7 @@ class SlotGameService
                     throw new \RuntimeException('Existing spin settlement has no saved response; reconciliation is required.');
                 }
 
-                $this->walletService->settleGameRound(
+                $settlementResult = $this->walletService->settleGameRound(
                     $lockedUser,
                     'buffalo',
                     $requestId,
@@ -258,6 +262,14 @@ class SlotGameService
                         'is_free_spin' => $isFreeSpin,
                     ]
                 );
+                if (! empty($settlementResult['duplicate'])) {
+                    $replay = $settlementResult['engine_result'] ?? null;
+                    if (is_array($replay)) {
+                        throw new \\App\\Exceptions\\BuffaloSpinReplayException($replay);
+                    }
+
+                    throw new \\RuntimeException('Duplicate settlement exists without a saved spin response; reconciliation is required.');
+                }
                 $lockedUser->refresh();
             }
 
