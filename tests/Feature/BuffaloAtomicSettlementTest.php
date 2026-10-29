@@ -49,7 +49,9 @@ class BuffaloAtomicSettlementTest extends TestCase
         $wallet->settleGameRound($user, 'buffalo', 'request-000000000002', 'BUFFALO1024', 10, 4, $meta);
 
         $this->expectException(RuntimeException::class);
-        $wallet->settleGameRound($user, 'buffalo', 'request-000000000002', 'BUFFALO1024', 10, 5, $meta);
+        $wallet->settleGameRound($user, 'buffalo', 'request-000000000002', 'BUFFALO1024', 10, 5, [
+            'request_fingerprint' => hash('sha256', 'different-spin'),
+        ]);
     }
 
     public function test_zero_bet_zero_win_free_spin_is_still_recorded_idempotently(): void
