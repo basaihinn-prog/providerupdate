@@ -259,7 +259,9 @@ class CustomWalletService
             'game_code' => $gameCode,
             'bet_amount' => $bet,
             'win_amount' => $win,
-            'meta' => $meta,
+            // Only stable request identity belongs in the fingerprint. Engine-generated
+            // match numbers/nonces can differ on a concurrent retry of the same key.
+            'request_fingerprint' => (string) ($meta['request_fingerprint'] ?? ''),
         ], JSON_THROW_ON_ERROR));
 
         try {
