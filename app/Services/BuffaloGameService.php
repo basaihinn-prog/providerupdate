@@ -109,8 +109,8 @@ class BuffaloGameService
     /**
      * Build a launch URL for the locally hosted Buffalo Cocos build.
      *
-     * The game build's legacy API contract expects id/passcode/game/domain.
-     * Gameplay API routes must be implemented and verified separately before enabling real-money play.
+     * The legacy Cocos build reads apiUrl from the query string so its requests reach providerupdate even when assets use another host.
+     * Real-money play must remain disabled until staging tests pass.
      */
     public static function generateGameUrl(User $user, int $roomId = 1, string $lobbyUrl = ''): string
     {
@@ -129,11 +129,23 @@ class BuffaloGameService
         $appUrl = (string) config('app.url', '');
         $domain = (string) parse_url($appUrl, PHP_URL_HOST);
         $finalLobbyUrl = $lobbyUrl !== '' ? $lobbyUrl : $appUrl;
+        $apiUrl = trim((string) config('services.buffalo.api_url', ''));
+        if ($apiUrl === '') {
+            $apiUrl = rtrim($appUrl, '/') . '/api/';
+        }
+        if (! filter_var($apiUrl, FILTER_VALIDATE_URL)) {
+            throw new \RuntimeException('Buffalo API URL is not configured as a valid absolute URL.');
+        }
+        $apiScheme = strtolower((string) parse_url($apiUrl, PHP_URL_SCHEME));
+        if ($apiScheme !== 'https' && ! (app()->environment(['local', 'testing']) && $apiScheme === 'http')) {
+            throw new \RuntimeException('Buffalo API URL must use HTTPS outside local/testing environments.');
+        }
 
         $query = http_build_query([
             'gameId' => 23,
             'roomId' => $roomId,
             'lobbyUrl' => $finalLobbyUrl,
+            'apiUrl' => $apiUrl,
             'id' => $auth['uid'],
             'passcode' => $auth['token'],
             'game' => (string) config('services.buffalo.game_code', 'Buffalo'),
