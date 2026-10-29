@@ -36,7 +36,7 @@ class BuffaloLegacyGameController extends Controller
             ]
         );
 
-        return response()->json(array_merge($payload, ['gameplayEnabled' => true]));
+        return response()->json(array_merge($payload, ['gameplayEnabled' => (bool) config('services.buffalo.gameplay_enabled', false)]));
     }
 
     public function ping(Request $request): JsonResponse
@@ -45,7 +45,7 @@ class BuffaloLegacyGameController extends Controller
             return response()->json(['status' => 'incorrect credential'], 401);
         }
 
-        return response()->json(['status' => 'ok', 'gameplayEnabled' => true]);
+        return response()->json(['status' => 'ok', 'gameplayEnabled' => (bool) config('services.buffalo.gameplay_enabled', false)]);
     }
 
     public function exit(Request $request): JsonResponse
@@ -55,7 +55,7 @@ class BuffaloLegacyGameController extends Controller
         }
 
         // The legacy client sends no session token on exit. Keep the server session active so pending free spins survive relaunch.
-        return response()->json(['status' => 'ok', 'sessionClosed' => false, 'gameplayEnabled' => true]);
+        return response()->json(['status' => 'ok', 'sessionClosed' => false, 'gameplayEnabled' => (bool) config('services.buffalo.gameplay_enabled', false)]);
     }
 
     public function bet(Request $request): JsonResponse
@@ -72,6 +72,13 @@ class BuffaloLegacyGameController extends Controller
         $user = $this->resolvePlayer($request);
         if (! $user) {
             return response()->json(['status' => 'incorrect credential'], 401);
+        }
+
+        if (! (bool) config('services.buffalo.gameplay_enabled', false)) {
+            return response()->json([
+                'status' => 'gameplay_disabled',
+                'message' => 'Buffalo wagering is disabled until staging verification is complete.',
+            ], 503);
         }
 
         try {
