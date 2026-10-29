@@ -63,6 +63,8 @@ class SlotGameService
             'user_id' => (int) $user->getKey(),
             'game_code' => $game->game_code,
             'bet_amount' => number_format(round($betAmount, 2), 2, '.', ''),
+            'domain' => (string) ($meta['domain'] ?? ''),
+            'client_seed' => (string) ($meta['client_seed'] ?? ''),
             'request_id' => $requestId,
         ], JSON_THROW_ON_ERROR));
         $meta['request_id'] = $requestId;
