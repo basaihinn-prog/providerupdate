@@ -53,36 +53,85 @@ class SlotGameService
 
     public function legacySpin(User $user, float $betAmount, ?string $requestedGameCode = null, array $meta = []): array
     {
+        $requestId = trim((string) ($meta['request_id'] ?? ''));
+        if (! preg_match('/^[A-Za-z0-9_-]{16,128}$/', $requestId)) {
+            throw new \\RuntimeException('A unique request_id (16-128 letters, digits, _ or -) is required for every spin.');
+        }
+
         $game = $this->gameCreatorService->resolveRequestedGame($requestedGameCode);
-        $session = $this->gameSessionService->initSession(
-            $game,
-            $user->user_name,
-            $user,
-            $meta['client_seed'] ?? null,
-            $meta
-        );
+        $fingerprint = hash('sha256', json_encode([
+            'user_id' => (int) $user->getKey(),
+            'game_code' => $game->game_code,
+            'bet_amount' => number_format(round($betAmount, 2), 2, '.', ''),
+            'request_id' => $requestId,
+        ], JSON_THROW_ON_ERROR));
+        $meta['request_id'] = $requestId;
+        $meta['request_fingerprint'] = $fingerprint;
 
-        $result = $this->spinSession($game, $session, $betAmount, $user, $meta);
+        return DB::transaction(function () use ($user, $game, $betAmount, $meta, $requestId, $fingerprint) {
+            $existing = \\App\\Models\\GameRoundSettlement::query()
+                ->where('provider', 'buffalo')
+                ->where('round_id', $requestId)
+                ->lockForUpdate()
+                ->first();
 
-        return [
-            'bet' => $result['bet_amount'],
-            'balance' => $result['balance_after'],
-            'winAmount' => $result['total_win_amount'],
-            'freeSpinCount' => $result['feature_state']['free_spins_remaining'],
-            'freeSpinTotal' => $result['feature_state']['free_spins_awarded_total'],
-            'freeSpinStatus' => $result['feature_state']['free_spins_remaining'] > 0 ? 'active' : '',
-            'freeSpinWinCount' => $result['feature_state']['is_free_spin'] ? 1 : 0,
-            'freeSpinMultiply' => $result['feature_state']['free_spin_multiplier'],
-            'matchNo' => $result['match_no'],
-            'result' => [
-                'display' => $result['display_ids'],
-                'winPattern' => $result['win_patterns'],
-                'waysWins' => $result['wins'],
-                'proof' => $result['proof'],
-            ],
-            'auditTrail' => $result['audit_trail'],
-            'ggr' => $result['ggr'],
-        ];
+            if ($existing !== null) {
+                if ((int) $existing->user_id !== (int) $user->getKey()
+                    || $existing->game_code !== $game->game_code
+                    || ! hash_equals((string) data_get($existing->meta, 'request_fingerprint', ''), $fingerprint)) {
+                    throw new \\RuntimeException('request_id was already used for a different spin payload.');
+                }
+
+                $replay = data_get($existing->response, 'engine_result');
+                if (! is_array($replay)) {
+                    throw new \\RuntimeException('This spin is recorded but its response is incomplete; reconciliation is required.');
+                }
+
+                return $replay;
+            }
+
+            $session = $this->gameSessionService->initSession(
+                $game,
+                $user->user_name,
+                $user,
+                $meta['client_seed'] ?? null,
+                $meta
+            );
+            $result = $this->spinSession($game, $session, $betAmount, $user, $meta);
+            if (isset($result['_replay_legacy']) && is_array($result['_replay_legacy'])) {
+                return $result['_replay_legacy'];
+            }
+
+            $legacyResult = [
+                'bet' => $result['bet_amount'],
+                'balance' => $result['balance_after'],
+                'winAmount' => $result['total_win_amount'],
+                'freeSpinCount' => $result['feature_state']['free_spins_remaining'],
+                'freeSpinTotal' => $result['feature_state']['free_spins_awarded_total'],
+                'freeSpinStatus' => $result['feature_state']['free_spins_remaining'] > 0 ? 'active' : '',
+                'freeSpinWinCount' => $result['feature_state']['is_free_spin'] ? 1 : 0,
+                'freeSpinMultiply' => $result['feature_state']['free_spin_multiplier'],
+                'matchNo' => $result['match_no'],
+                'result' => [
+                    'display' => $result['display_ids'],
+                    'winPattern' => $result['win_patterns'],
+                    'waysWins' => $result['wins'],
+                    'proof' => $result['proof'],
+                ],
+                'auditTrail' => $result['audit_trail'],
+                'ggr' => $result['ggr'],
+            ];
+
+            $settlement = \\App\\Models\\GameRoundSettlement::query()
+                ->where('provider', 'buffalo')
+                ->where('round_id', $requestId)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $settlement->response = array_merge($settlement->response ?? [], ['engine_result' => $legacyResult]);
+            $settlement->save();
+
+            return $legacyResult;
+        }, 3);
     }
 
     public function initProviderSession(
@@ -135,16 +184,6 @@ class SlotGameService
                 throw new \RuntimeException('Insufficient balance');
             }
 
-            if (! $isFreeSpin && $lockedUser !== null && $chargedBet > 0) {
-                $withdrawn = $this->walletService->withdraw($lockedUser, $chargedBet, 'slot_bet', [
-                    'game_code' => $game->game_code,
-                ]);
-
-                if (! $withdrawn) {
-                    throw new \RuntimeException('Unable to reserve stake for spin');
-                }
-            }
-
             if ($isFreeSpin) {
                 $lockedSession->free_spins_remaining = max(0, $lockedSession->free_spins_remaining - 1);
             }
@@ -178,14 +217,49 @@ class SlotGameService
             $auditTrail['bonus_credit_win'] = round((float) $spinMath['bonus_win_amount'], 2);
             $auditTrail['final_aggregated_credit_win'] = $totalWinAmount;
 
-            if ($lockedUser !== null && $totalWinAmount > 0) {
-                $this->walletService->deposit($lockedUser, $totalWinAmount, 'slot_win', [
-                    'game_code' => $game->game_code,
-                    'match_no' => $spinMath['match_no'],
-                ]);
+            if ($lockedUser !== null) {
+                $requestId = trim((string) ($meta['request_id'] ?? ''));
+                $requestFingerprint = trim((string) ($meta['request_fingerprint'] ?? ''));
+                if ($requestId === '' || $requestFingerprint === '') {
+                    throw new \\RuntimeException('Idempotency request metadata is required for wallet-backed Buffalo spins.');
+                }
+
+                $existingSettlement = \\App\\Models\\GameRoundSettlement::query()
+                    ->where('provider', 'buffalo')
+                    ->where('round_id', $requestId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existingSettlement !== null) {
+                    if ((int) $existingSettlement->user_id !== (int) $lockedUser->getKey()
+                        || $existingSettlement->game_code !== $game->game_code
+                        || ! hash_equals((string) data_get($existingSettlement->meta, 'request_fingerprint', ''), $requestFingerprint)) {
+                        throw new \\RuntimeException('request_id was already used for a different spin payload.');
+                    }
+                    $replay = data_get($existingSettlement->response, 'engine_result');
+                    if (is_array($replay)) {
+                        return ['_replay_legacy' => $replay];
+                    }
+                    throw new \\RuntimeException('Existing spin settlement has no saved response; reconciliation is required.');
+                }
+
+                $this->walletService->settleGameRound(
+                    $lockedUser,
+                    'buffalo',
+                    $requestId,
+                    $game->game_code,
+                    $chargedBet,
+                    $totalWinAmount,
+                    [
+                        'request_fingerprint' => $requestFingerprint,
+                        'match_no' => $spinMath['match_no'],
+                        'spin_nonce' => $nonce,
+                        'is_free_spin' => $isFreeSpin,
+                    ]
+                );
+                $lockedUser->refresh();
             }
 
-            $lockedUser?->refresh();
             $balanceAfter = $lockedUser ? round((float) $lockedUser->balance, 2) : round($balanceBefore - $chargedBet + $totalWinAmount, 2);
             $ggrDelta = round($chargedBet - $totalWinAmount, 2);
             $lockedSession->total_bet = round((float) $lockedSession->total_bet + $chargedBet, 2);
