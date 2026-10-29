@@ -55,7 +55,7 @@ class SlotGameService
     {
         $requestId = trim((string) ($meta['request_id'] ?? ''));
         if (! preg_match('/^[A-Za-z0-9_-]{16,128}$/', $requestId)) {
-            throw new \\RuntimeException('A unique request_id (16-128 letters, digits, _ or -) is required for every spin.');
+            throw new \RuntimeException('A unique request_id (16-128 letters, digits, _ or -) is required for every spin.');
         }
 
         $game = $this->gameCreatorService->resolveRequestedGame($requestedGameCode);
@@ -69,7 +69,7 @@ class SlotGameService
         $meta['request_fingerprint'] = $fingerprint;
 
         return DB::transaction(function () use ($user, $game, $betAmount, $meta, $requestId, $fingerprint) {
-            $existing = \\App\\Models\\GameRoundSettlement::query()
+            $existing = \App\Models\GameRoundSettlement::query()
                 ->where('provider', 'buffalo')
                 ->where('round_id', $requestId)
                 ->lockForUpdate()
@@ -79,12 +79,12 @@ class SlotGameService
                 if ((int) $existing->user_id !== (int) $user->getKey()
                     || $existing->game_code !== $game->game_code
                     || ! hash_equals((string) data_get($existing->meta, 'request_fingerprint', ''), $fingerprint)) {
-                    throw new \\RuntimeException('request_id was already used for a different spin payload.');
+                    throw new \RuntimeException('request_id was already used for a different spin payload.');
                 }
 
                 $replay = data_get($existing->response, 'engine_result');
                 if (! is_array($replay)) {
-                    throw new \\RuntimeException('This spin is recorded but its response is incomplete; reconciliation is required.');
+                    throw new \RuntimeException('This spin is recorded but its response is incomplete; reconciliation is required.');
                 }
 
                 return $replay;
@@ -122,7 +122,7 @@ class SlotGameService
                 'ggr' => $result['ggr'],
             ];
 
-            $settlement = \\App\\Models\\GameRoundSettlement::query()
+            $settlement = \App\Models\GameRoundSettlement::query()
                 ->where('provider', 'buffalo')
                 ->where('round_id', $requestId)
                 ->lockForUpdate()
@@ -221,10 +221,10 @@ class SlotGameService
                 $requestId = trim((string) ($meta['request_id'] ?? ''));
                 $requestFingerprint = trim((string) ($meta['request_fingerprint'] ?? ''));
                 if ($requestId === '' || $requestFingerprint === '') {
-                    throw new \\RuntimeException('Idempotency request metadata is required for wallet-backed Buffalo spins.');
+                    throw new \RuntimeException('Idempotency request metadata is required for wallet-backed Buffalo spins.');
                 }
 
-                $existingSettlement = \\App\\Models\\GameRoundSettlement::query()
+                $existingSettlement = \App\Models\GameRoundSettlement::query()
                     ->where('provider', 'buffalo')
                     ->where('round_id', $requestId)
                     ->lockForUpdate()
@@ -234,13 +234,13 @@ class SlotGameService
                     if ((int) $existingSettlement->user_id !== (int) $lockedUser->getKey()
                         || $existingSettlement->game_code !== $game->game_code
                         || ! hash_equals((string) data_get($existingSettlement->meta, 'request_fingerprint', ''), $requestFingerprint)) {
-                        throw new \\RuntimeException('request_id was already used for a different spin payload.');
+                        throw new \RuntimeException('request_id was already used for a different spin payload.');
                     }
                     $replay = data_get($existingSettlement->response, 'engine_result');
                     if (is_array($replay)) {
                         return ['_replay_legacy' => $replay];
                     }
-                    throw new \\RuntimeException('Existing spin settlement has no saved response; reconciliation is required.');
+                    throw new \RuntimeException('Existing spin settlement has no saved response; reconciliation is required.');
                 }
 
                 $this->walletService->settleGameRound(
