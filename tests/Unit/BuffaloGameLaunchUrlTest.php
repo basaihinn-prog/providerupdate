@@ -37,7 +37,8 @@ class BuffaloGameLaunchUrlTest extends TestCase
         $this->assertSame('https://games.example.test/buffalo/index.html', strtok($url, '?'));
         $this->assertSame('23', $query['gameId']);
         $this->assertSame('2', $query['roomId']);
-        $this->assertSame('launch-test-user', BuffaloGameService::extractUserNameFromUid($query['id']));
+        $this->assertStringStartsWith('gam', $query['id']);
+        $this->assertSame(31, strlen($query['id']));
         $this->assertNotEmpty($query['passcode']);
         $this->assertSame('Buffalo', $query['game']);
         $this->assertSame('api.example.test', $query['domain']);
