@@ -52,6 +52,21 @@ class BuffaloAtomicSettlementTest extends TestCase
         $wallet->settleGameRound($user, 'buffalo', 'request-000000000002', 'BUFFALO1024', 10, 5, $meta);
     }
 
+    public function test_zero_bet_zero_win_free_spin_is_still_recorded_idempotently(): void
+    {
+        $user = $this->player(5.00);
+        $wallet = app(CustomWalletService::class);
+        $meta = ['request_fingerprint' => hash('sha256', 'free-spin-loss')];
+
+        $first = $wallet->settleGameRound($user, 'buffalo', 'request-000000000004', 'BUFFALO1024', 0, 0, $meta);
+        $retry = $wallet->settleGameRound($user, 'buffalo', 'request-000000000004', 'BUFFALO1024', 0, 0, $meta);
+
+        $this->assertFalse($first['duplicate']);
+        $this->assertTrue($retry['duplicate']);
+        $this->assertSame('5.00', (string) $user->fresh()->balance);
+        $this->assertSame(1, GameRoundSettlement::query()->where('round_id', 'request-000000000004')->count());
+    }
+
     public function test_insufficient_balance_rolls_back_settlement_and_wallet_mutation(): void
     {
         $user = $this->player(5.00);
