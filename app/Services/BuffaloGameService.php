@@ -136,6 +136,7 @@ class BuffaloGameService
         if (! filter_var($apiUrl, FILTER_VALIDATE_URL)) {
             throw new \RuntimeException('Buffalo API URL is not configured as a valid absolute URL.');
         }
+        $apiUrl = rtrim($apiUrl, '/') . '/';
         $apiScheme = strtolower((string) parse_url($apiUrl, PHP_URL_SCHEME));
         if ($apiScheme !== 'https' && ! (app()->environment(['local', 'testing']) && $apiScheme === 'http')) {
             throw new \RuntimeException('Buffalo API URL must use HTTPS outside local/testing environments.');
