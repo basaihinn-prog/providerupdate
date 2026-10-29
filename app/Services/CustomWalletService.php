@@ -248,6 +248,7 @@ class CustomWalletService
 
         if ($provider === '' || strlen($provider) > 40 || $roundId === '' || strlen($roundId) > 128
             || $gameCode === '' || strlen($gameCode) > 100
+            || trim((string) ($meta['request_fingerprint'] ?? '')) === ''
             || bccomp($bet, '0.00', 2) < 0 || bccomp($win, '0.00', 2) < 0) {
             throw new \InvalidArgumentException('Invalid game settlement payload.');
         }
