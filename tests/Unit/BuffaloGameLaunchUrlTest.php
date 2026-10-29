@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests\\Unit;
+namespace Tests\Unit;
 
-use App\\Models\\User;
-use App\\Services\\BuffaloGameService;
+use App\Models\User;
+use App\Services\BuffaloGameService;
 use RuntimeException;
-use Tests\\TestCase;
+use Tests\TestCase;
 
 class BuffaloGameLaunchUrlTest extends TestCase
 {
