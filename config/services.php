@@ -39,6 +39,7 @@ return [
     'buffalo' => [
         'game_url' => env('BUFFALO_GAME_URL'),
         'api_url' => env('BUFFALO_API_URL'),
+        'gameplay_enabled' => env('BUFFALO_GAMEPLAY_ENABLED', false),
         'game_code' => env('BUFFALO_GAME_CODE', 'Buffalo'),
     ],
 
