@@ -118,6 +118,14 @@ Route::prefix('provider/shan')->group(function () {
     Route::post('ShanLaunchGame', [ShankomeeGetBalanceController::class, 'LaunchGame']);
 });
 
+// Buffalo Cocos client calls these exact paths on its configured API base URL.
+Route::middleware('throttle:120,1')->group(function () {
+    Route::post('/start_info', [BuffaloLegacyGameController::class, 'startInfo']);
+    Route::post('/ping', [BuffaloLegacyGameController::class, 'ping']);
+    Route::post('/bet', [BuffaloLegacyGameController::class, 'bet']);
+    Route::post('/exit', [BuffaloLegacyGameController::class, 'exit']);
+});
+
 // Legacy Buffalo Cocos contract. Bet is explicitly fail-closed until authoritative settlement is integrated.
 Route::prefix('buffalo/legacy')->middleware('throttle:120,1')->group(function () {
     Route::post('/start_info', [BuffaloLegacyGameController::class, 'startInfo']);
