@@ -1,13 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api\\V1\\Game;
+namespace App\Http\Controllers\Api\V1\Game;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\User;
-use App\\Services\\BuffaloGameService;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Log;
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\BuffaloGameService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class BuffaloLegacyGameController extends Controller
 {
